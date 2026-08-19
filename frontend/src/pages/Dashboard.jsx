@@ -1,10 +1,11 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Plus, ShieldCheck, Layers, Award, Activity } from 'lucide-react';
+import { Plus, ShieldCheck, Layers, Award, Activity, RotateCw, Trophy, Target, Flame } from 'lucide-react';
 import PlatformCard from '../components/PlatformCard';
 import UnlinkedPlatformCard from '../components/UnlinkedPlatformCard';
 import LinkPlatformModal from '../components/LinkPlatformModal';
 import { PLATFORM_META } from '../components/PlatformIcons';
+import { API_BASE_URL } from '../config/api';
 
 const ALL_PLATFORMS = Object.keys(PLATFORM_META);
 
@@ -12,6 +13,7 @@ const Dashboard = () => {
   const { user } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [syncingAll, setSyncingAll] = useState(false);
   const [error, setError] = useState('');
   
   // Modal states
@@ -23,7 +25,7 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const token = JSON.parse(localStorage.getItem('user'))?.token;
-      const res = await fetch('http://localhost:5001/api/profile', {
+      const res = await fetch(`${API_BASE_URL}/api/profile`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -49,13 +51,50 @@ const Dashboard = () => {
 
   const handleVerifySuccess = (updatedPlatforms, msg) => {
     setProfile(prev => ({ ...prev, platforms: updatedPlatforms }));
-    showNotification(msg || 'Platform ownership verified successfully!');
+    showNotification(msg || 'Platform ownership verified and stats synchronized!');
+  };
+
+  const handleSyncSuccess = (updatedPlatforms, msg) => {
+    setProfile(prev => ({ ...prev, platforms: updatedPlatforms }));
+    showNotification(msg || 'Platform statistics updated successfully!');
+  };
+
+  const handleSyncAll = async () => {
+    const verified = (profile?.platforms || []).filter(p => p.status === 'verified');
+    if (verified.length === 0) {
+      showNotification('Verify at least one platform before synchronizing.');
+      return;
+    }
+
+    setSyncingAll(true);
+    try {
+      const token = JSON.parse(localStorage.getItem('user'))?.token;
+      const res = await fetch(`${API_BASE_URL}/api/profile/sync-all`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to synchronize all platforms');
+      }
+
+      setProfile(prev => ({ ...prev, platforms: data.platforms }));
+      showNotification(data.message || 'All platform statistics synchronized!');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSyncingAll(false);
+    }
   };
 
   const handleUnlink = async (platformKey) => {
     try {
       const token = JSON.parse(localStorage.getItem('user'))?.token;
-      const res = await fetch(`http://localhost:5001/api/profile/platforms/${platformKey}`, {
+      const res = await fetch(`${API_BASE_URL}/api/profile/platforms/${platformKey}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`
@@ -84,8 +123,16 @@ const Dashboard = () => {
   const linkedPlatformKeys = linkedPlatforms.map(p => p.platform);
   const unlinkedPlatformKeys = ALL_PLATFORMS.filter(key => !linkedPlatformKeys.includes(key));
 
-  const verifiedCount = linkedPlatforms.filter(p => p.status === 'verified').length;
+  const verifiedPlatforms = linkedPlatforms.filter(p => p.status === 'verified');
+  const verifiedCount = verifiedPlatforms.length;
   const pendingCount = linkedPlatforms.filter(p => p.status === 'pending').length;
+
+  // Aggregated live statistics
+  const totalSolvedAll = verifiedPlatforms.reduce((acc, p) => acc + (p.stats?.totalSolved || 0), 0);
+  const peakRatingAll = verifiedPlatforms.length > 0 
+    ? Math.max(0, ...verifiedPlatforms.map(p => p.stats?.maxRating || p.stats?.rating || 0))
+    : 0;
+  const totalContestsAll = verifiedPlatforms.reduce((acc, p) => acc + (p.stats?.contestsGiven || 0), 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-slate-100">
@@ -109,15 +156,29 @@ const Dashboard = () => {
                 Welcome, {profile?.name || user?.name}!
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 shadow-xs">
-                Phase 3 Active
+                Phase 4 Active
               </span>
             </div>
             <p className="text-sm text-slate-400">
-              Manage and verify your competitive programming & developer profiles in one unified black & blue hub.
+              Manage, verify, and synchronize live statistics across your competitive programming and developer profiles.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Global Sync All Button */}
+            {verifiedCount > 0 && (
+              <button
+                onClick={handleSyncAll}
+                disabled={syncingAll}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#0B1120] hover:bg-slate-800/80 text-blue-300 hover:text-white border border-blue-900/60 hover:border-blue-500/50 font-semibold text-sm rounded-xl transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                title="Synchronize all verified platforms now"
+              >
+                <RotateCw className={`w-4 h-4 ${syncingAll ? 'animate-spin text-blue-400' : ''}`} />
+                <span>{syncingAll ? 'Syncing All...' : 'Sync All'}</span>
+              </button>
+            )}
+
+            {/* Link Platform Modal Trigger */}
             <button
               onClick={() => openConnectModal('leetcode')}
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all cursor-pointer"
@@ -128,7 +189,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Quick Stats Bar */}
+        {/* Quick Aggregated Stats Bar */}
         <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-blue-950/60">
           <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-[#090E1A]/80 border border-blue-950/50">
             <div className="p-2.5 bg-blue-950 text-blue-400 rounded-xl border border-blue-900/50">
@@ -142,31 +203,31 @@ const Dashboard = () => {
 
           <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-[#090E1A]/80 border border-blue-950/50">
             <div className="p-2.5 bg-emerald-950 text-emerald-400 rounded-xl border border-emerald-900/50">
-              <ShieldCheck className="w-5 h-5" />
+              <Target className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Verified</p>
-              <p className="text-xl font-extrabold text-white">{verifiedCount}</p>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Solved / Repos</p>
+              <p className="text-xl font-extrabold text-emerald-400">{totalSolvedAll.toLocaleString()}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-[#090E1A]/80 border border-blue-950/50">
             <div className="p-2.5 bg-amber-950 text-amber-400 rounded-xl border border-amber-900/50">
-              <Activity className="w-5 h-5" />
+              <Trophy className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Pending Bio Check</p>
-              <p className="text-xl font-extrabold text-white">{pendingCount}</p>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Peak Rating</p>
+              <p className="text-xl font-extrabold text-amber-300">{peakRatingAll > 0 ? peakRatingAll.toLocaleString() : '—'}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-[#090E1A]/80 border border-blue-950/50">
             <div className="p-2.5 bg-purple-950 text-purple-400 rounded-xl border border-purple-900/50">
-              <Award className="w-5 h-5" />
+              <Flame className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Supported Platforms</p>
-              <p className="text-xl font-extrabold text-white">{ALL_PLATFORMS.length}</p>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Contests</p>
+              <p className="text-xl font-extrabold text-purple-300">{totalContestsAll.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -200,7 +261,7 @@ const Dashboard = () => {
               </span>
             </h2>
             <p className="text-xs text-slate-400">
-              Paste the code into each profile's bio before Phase 3 verification.
+              Paste the code into each profile's bio before verification, then sync live statistics.
             </p>
           </div>
 
@@ -211,6 +272,7 @@ const Dashboard = () => {
                 platformData={platformData}
                 onUnlink={handleUnlink}
                 onVerifySuccess={handleVerifySuccess}
+                onSyncSuccess={handleSyncSuccess}
               />
             ))}
           </div>

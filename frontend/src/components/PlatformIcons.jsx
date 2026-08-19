@@ -35,13 +35,6 @@ export const PlatformIcons = ({ platform, className = "w-6 h-6" }) => {
           className={`${className} object-contain`}
         />
       );
-    case 'geeksforgeeks':
-      return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="24" height="24" rx="5" fill="#2F8D46" />
-          <path d="M16.5 12C16.5 14.485 14.485 16.5 12 16.5C9.515 16.5 7.5 14.485 7.5 12C7.5 9.515 9.515 7.5 12 7.5C13.5 7.5 14.8 8.2 15.6 9.4L14.2 10.4C13.7 9.6 12.9 9.1 12 9.1C10.4 9.1 9.1 10.4 9.1 12C9.1 13.6 10.4 14.9 12 14.9C13.4 14.9 14.5 13.9 14.8 12.6H12V11H16.5V12Z" fill="white" />
-        </svg>
-      );
     case 'atcoder':
       return (
         <img 
@@ -95,31 +88,20 @@ export const PLATFORM_META = {
     category: 'Competitive Programming',
     badgeColor: 'bg-yellow-950/60 text-yellow-300 border-yellow-800/60',
     placeholder: 'e.g. gennady',
-    bioField: 'About Me / Organization / Bio',
+    bioField: 'Highest Degree Earned',
     profileUrl: (h) => `https://www.codechef.com/users/${h}`,
     editUrl: (h) => `https://www.codechef.com/users/${h}`,
-    editGuide: 'Edit Profile → About Me / Details',
+    editGuide: 'Edit Profile → Highest Degree Earned',
     pitch: 'Display your star division and contest standings across global long & cook-off challenges.'
-  },
-  geeksforgeeks: {
-    name: 'GeeksforGeeks',
-    category: 'Practice & POTD',
-    badgeColor: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60',
-    placeholder: 'e.g. geeks_master',
-    bioField: 'Institution / Short Bio',
-    profileUrl: (h) => `https://auth.geeksforgeeks.org/user/${h}/`,
-    editUrl: (h) => `https://auth.geeksforgeeks.org/user/${h}/`,
-    editGuide: 'Edit Profile → Basic Details / Bio',
-    pitch: 'Track your practice streak, POTD scores, and institution rank alongside your other achievements.'
   },
   atcoder: {
     name: 'AtCoder',
     category: 'Competitive Programming',
     badgeColor: 'bg-sky-950/60 text-sky-300 border-sky-800/60',
     placeholder: 'e.g. chokudai',
-    bioField: 'Affiliation / Country / Bio',
+    bioField: 'Affiliation',
     profileUrl: (h) => `https://atcoder.jp/users/${h}`,
-    editUrl: (h) => `https://atcoder.jp/users/${h}`,
+    editUrl: (h) => `https://atcoder.jp/settings`,
     editGuide: 'Settings → User Profile → Affiliation',
     pitch: 'Prove your algorithmic speed with Japanese & international ABC/ARC contest rating trends.'
   },
@@ -139,10 +121,10 @@ export const PLATFORM_META = {
     category: 'Professional Network',
     badgeColor: 'bg-blue-950/60 text-blue-300 border-blue-800/60',
     placeholder: 'e.g. john-doe',
-    bioField: 'Headline or About / Summary',
+    bioField: 'Address',
     profileUrl: (h) => `https://www.linkedin.com/in/${h.replace(/^in\//, '')}`,
     editUrl: (h) => `https://www.linkedin.com/in/${h.replace(/^in\//, '')}`,
-    editGuide: 'View Profile → Edit Intro / About',
+    editGuide: 'Edit Contact Info → Address',
     pitch: 'Complete your developer identity by pairing your real coding stats with your verified professional profile.'
   }
 };

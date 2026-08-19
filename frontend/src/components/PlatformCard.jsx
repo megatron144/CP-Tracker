@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { Copy, Check, Trash2, Clock, CheckCircle2, ShieldAlert, ExternalLink, ShieldCheck, Loader2 } from 'lucide-react';
+import { 
+  Copy, Check, Trash2, Clock, CheckCircle2, ShieldAlert, 
+  ExternalLink, ShieldCheck, Loader2, RotateCw, Award, 
+  Trophy, Target, Flame, Calendar
+} from 'lucide-react';
 import { PlatformIcons, PLATFORM_META } from './PlatformIcons';
+import { API_BASE_URL } from '../config/api';
 
-const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
+const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }) => {
   const [copied, setCopied] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [verifyError, setVerifyError] = useState('');
+  const [syncError, setSyncError] = useState('');
 
-  const { platform, handle, status, verificationCode, createdAt } = platformData;
+  const { platform, handle, status, verificationCode, createdAt, stats } = platformData;
   const meta = PLATFORM_META[platform] || {
     name: platform,
     category: 'Developer Platform',
@@ -16,18 +23,32 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
   };
 
   const isVerified = status === 'verified';
-  const profileLink = meta.profileUrl ? meta.profileUrl(handle) : '#';
-  const editLink = meta.editUrl ? meta.editUrl(handle) : profileLink;
+  const cleanDisplayHandle = (handle || '')
+    .replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '')
+    .replace(/^https?:\/\/(www\.)?leetcode\.com\/(u\/)?/i, '')
+    .replace(/^https?:\/\/(www\.)?codeforces\.com\/profile\//i, '')
+    .replace(/^https?:\/\/(www\.)?codechef\.com\/users\//i, '')
+    .replace(/^https?:\/\/(www\.)?atcoder\.jp\/users\//i, '')
+    .replace(/^https?:\/\/(www\.)?github\.com\//i, '')
+    .replace(/^@+/, '')
+    .replace(/\/+$/, '');
 
-  const handleCopy = () => {
+  const profileLink = meta?.profileUrl ? meta.profileUrl(cleanDisplayHandle) : '#';
+  const editLink = meta?.editUrl ? meta.editUrl(cleanDisplayHandle) : '#';
+
+  const handleCopy = async () => {
     if (!verificationCode) return;
-    navigator.clipboard.writeText(verificationCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(verificationCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Fallback
+    }
   };
 
   const handleDelete = async () => {
-    if (window.confirm(`Are you sure you want to unlink ${meta.name} (@${handle})?`)) {
+    if (window.confirm(`Are you sure you want to unlink ${meta.name} (@${cleanDisplayHandle})?`)) {
       setUnlinking(true);
       await onUnlink(platform);
       setUnlinking(false);
@@ -37,10 +58,9 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
   const handleVerify = async () => {
     setVerifying(true);
     setVerifyError('');
-
     try {
       const token = JSON.parse(localStorage.getItem('user'))?.token;
-      const res = await fetch(`http://localhost:5001/api/profile/verify/${platform}`, {
+      const res = await fetch(`${API_BASE_URL}/api/profile/verify/${platform}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,9 +69,8 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
       });
 
       const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Verification failed. Please ensure the code is in your bio.');
+      if (!res.ok || (!data.verified && !data.success)) {
+        throw new Error(data.message || 'Verification failed. Make sure the code is saved in your profile bio.');
       }
 
       if (onVerifySuccess) {
@@ -62,6 +81,45 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
     } finally {
       setVerifying(false);
     }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncError('');
+    try {
+      const token = JSON.parse(localStorage.getItem('user'))?.token;
+      const res = await fetch(`${API_BASE_URL}/api/profile/sync/${platform}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to synchronize platform data');
+      }
+
+      if (onSyncSuccess) {
+        onSyncSuccess(data.platforms, data.message);
+      }
+    } catch (err) {
+      setSyncError(err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const formatTimeAgo = (date) => {
+    if (!date) return 'Never synced';
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return new Date(date).toLocaleDateString();
   };
 
   return (
@@ -85,9 +143,9 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-sm font-semibold text-blue-400 hover:text-blue-300 hover:underline mt-0.5 font-mono group"
-                title={`Open @${handle} on ${meta.name}`}
+                title={`Open @${cleanDisplayHandle} on ${meta.name}`}
               >
-                <span>@{handle}</span>
+                <span>@{cleanDisplayHandle}</span>
                 <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
               </a>
             </div>
@@ -95,7 +153,7 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
 
           {/* Status Badge */}
           {isVerified ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/60 text-emerald-300 border border-emerald-800/60">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/60 text-emerald-300 border border-emerald-800/60 shadow-xs">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Verified
             </span>
@@ -108,7 +166,7 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
         </div>
       </div>
 
-      {/* Card Body: Verification Code / Instructions */}
+      {/* Card Body: Verification Code OR Normalized Stats Grid */}
       <div className="p-5 bg-[#090E1A]/80 flex-1 space-y-3.5">
         {!isVerified ? (
           <div className="bg-[#0F172A] p-4 rounded-xl border border-blue-900/40 space-y-3">
@@ -151,7 +209,7 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
               rel="noreferrer"
               className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-blue-950/70 hover:bg-blue-900/60 border border-blue-800/60 hover:border-blue-500/60 rounded-lg text-xs font-semibold text-blue-200 hover:text-white transition-all shadow-xs group"
             >
-              <span>Open @{handle} on {meta.name}</span>
+              <span>Open @{cleanDisplayHandle} on {meta.name}</span>
               <ExternalLink className="w-3.5 h-3.5 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
             </a>
 
@@ -174,23 +232,155 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
               </div>
             )}
           </div>
-        ) : (
-          <div className="p-3.5 bg-emerald-950/30 rounded-xl border border-emerald-900/50 flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-            <p className="text-xs text-emerald-200 font-medium">
-              Profile ownership verified. Stats synchronization is active!
+        ) : platform === 'linkedin' ? (
+          /* LINKEDIN VERIFIED: Professional Identity Display */
+          <div className="p-4 bg-[#0F172A] rounded-xl border border-blue-900/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                Professional Profile
+              </span>
+              <span className="text-[10px] font-semibold text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-900/50">
+                Connected
+              </span>
+            </div>
+            <p className="text-xs text-slate-300">
+              Verified LinkedIn profile for <strong className="text-white">@{cleanDisplayHandle}</strong>.
             </p>
+            <a
+              href={profileLink}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white rounded-lg text-xs font-semibold transition-all shadow-xs"
+            >
+              <span>Open on LinkedIn</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        ) : (
+          /* VERIFIED STATE: Normalized Stats Display */
+          <div className="space-y-3.5">
+            {/* Stats Metric Cards Grid */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* Stat 1: Rating / Score */}
+              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">Rating / Score</span>
+                  <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-lg font-extrabold text-white tracking-tight">
+                    {stats?.rating !== null && stats?.rating !== undefined ? stats.rating.toLocaleString() : '—'}
+                  </span>
+                  {stats?.maxRating && stats.maxRating !== stats.rating && (
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      (max {stats.maxRating})
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Stat 2: Total Solved / Repos */}
+              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">
+                    {platform === 'github' ? 'Public Repos' : 'Solved'}
+                  </span>
+                  <Target className="w-3.5 h-3.5 text-emerald-400" />
+                </div>
+                <span className="text-lg font-extrabold text-white tracking-tight">
+                  {stats?.totalSolved !== null && stats?.totalSolved !== undefined ? stats.totalSolved.toLocaleString() : '0'}
+                </span>
+              </div>
+
+              {/* Stat 3: Rank / Tier / Badge */}
+              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">Rank / Tier</span>
+                  <Award className="w-3.5 h-3.5 text-blue-400" />
+                </div>
+                <span className="text-xs font-bold text-blue-300 truncate block">
+                  {stats?.rank || (stats?.rating ? `${stats.rating} Rated` : 'Active')}
+                </span>
+              </div>
+
+              {/* Stat 4: Contests Participated */}
+              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">
+                    {platform === 'github' ? 'Gists' : 'Contests'}
+                  </span>
+                  <Calendar className="w-3.5 h-3.5 text-purple-400" />
+                </div>
+                <span className="text-lg font-extrabold text-white tracking-tight">
+                  {stats?.contestsGiven || stats?.extra?.publicGists || 0}
+                </span>
+              </div>
+            </div>
+
+            {/* Extra Breakdown Pills (e.g. LeetCode Easy/Med/Hard, GitHub stars, etc.) */}
+            {platform === 'leetcode' && stats?.extra && (
+              <div className="flex items-center justify-between gap-1.5 p-2 bg-[#0B1120] rounded-xl border border-slate-800/80 text-[11px]">
+                <span className="text-emerald-400 font-semibold">Easy: {stats.extra.easy || 0}</span>
+                <span className="text-amber-400 font-semibold">Med: {stats.extra.medium || 0}</span>
+                <span className="text-red-400 font-semibold">Hard: {stats.extra.hard || 0}</span>
+              </div>
+            )}
+
+            {platform === 'github' && stats?.extra && (
+              <div className="flex items-center justify-between gap-1.5 p-2 bg-[#0B1120] rounded-xl border border-slate-800/80 text-[11px]">
+                <span className="text-amber-300 font-semibold">★ Stars: {stats.extra.totalStars || 0}</span>
+                <span className="text-blue-300 font-semibold">Followers: {stats.extra.followers || 0}</span>
+              </div>
+            )}
+
+            {platform === 'atcoder' && stats?.extra && (
+              <div className="flex items-center justify-between gap-1.5 p-2 bg-[#0B1120] rounded-xl border border-slate-800/80 text-[11px]">
+                <span className="text-sky-300 font-semibold">Tier: {stats.rank || 'Rated'}</span>
+                {stats.extra.globalRank && (
+                  <span className="text-slate-400 font-mono">Rank: {stats.extra.globalRank}</span>
+                )}
+              </div>
+            )}
+
+            {/* Sync Error Notice */}
+            {syncError && (
+              <div className="p-2.5 bg-red-950/70 border border-red-800/80 rounded-lg text-xs text-red-300 leading-relaxed animate-in fade-in duration-200">
+                {syncError}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Card Footer Actions */}
       <div className="px-5 py-3 bg-[#0B1120] border-t border-blue-950/60 flex items-center justify-between text-xs">
-        <span className="text-slate-500">
-          Linked {new Date(createdAt || Date.now()).toLocaleDateString()}
+        <span className="text-slate-500 flex items-center gap-1">
+          {isVerified ? (
+            <>
+              <Clock className="w-3 h-3 text-slate-500" />
+              <span>{formatTimeAgo(stats?.lastSynced)}</span>
+            </>
+          ) : (
+            <span>Linked {new Date(createdAt || Date.now()).toLocaleDateString()}</span>
+          )}
         </span>
 
         <div className="flex items-center gap-2">
+          {/* Verified Actions: Sync Now Button */}
+          {isVerified && (
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-800/60 hover:border-blue-500 text-blue-300 hover:text-white rounded-lg font-semibold text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              title="Fetch fresh live statistics from platform"
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-blue-400' : ''}`} />
+              <span>{syncing ? 'Syncing...' : 'Sync Now'}</span>
+            </button>
+          )}
+
+          {/* Pending Actions: Verify Bio Button */}
           {!isVerified && (
             <button
               onClick={handleVerify}
@@ -212,6 +402,7 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
             </button>
           )}
 
+          {/* Delete / Unlink Button */}
           <button
             onClick={handleDelete}
             disabled={unlinking}
