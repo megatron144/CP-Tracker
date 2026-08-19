@@ -144,7 +144,7 @@ const LinkPlatformModal = ({ isOpen, onClose, onLinkSuccess, defaultPlatform = '
               className="w-full px-3.5 py-2.5 bg-[#0B1120] border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
             <p className="mt-1.5 text-xs text-slate-400">
-              In Phase 3, you'll verify this by placing a temporary code in your {currentMeta.bioField}.
+              In Phase 3, you'll verify this by placing a temporary code in your <strong className="text-slate-300">{currentMeta.bioField}</strong> {currentMeta.editGuide && <span className="text-blue-300">({currentMeta.editGuide})</span>}.
             </p>
           </div>
 

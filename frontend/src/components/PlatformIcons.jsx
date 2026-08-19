@@ -74,6 +74,9 @@ export const PLATFORM_META = {
     badgeColor: 'bg-amber-950/60 text-amber-300 border-amber-800/60',
     placeholder: 'e.g. neal_wu',
     bioField: 'Profile Summary / About Me',
+    profileUrl: (h) => `https://leetcode.com/u/${h}/`,
+    editUrl: (h) => `https://leetcode.com/u/${h}/`,
+    editGuide: 'Profile / Settings → Summary / About Me',
     pitch: 'Flaunt your daily streak, acceptance rate, and Hard problem tally on your unified portfolio!'
   },
   codeforces: {
@@ -82,6 +85,9 @@ export const PLATFORM_META = {
     badgeColor: 'bg-blue-950/60 text-blue-300 border-blue-800/60',
     placeholder: 'e.g. tourist',
     bioField: 'First Name / Last Name or City',
+    profileUrl: (h) => `https://codeforces.com/profile/${h}`,
+    editUrl: (h) => `https://codeforces.com/profile/${h}`,
+    editGuide: 'Settings → Social → First Name / City',
     pitch: 'Showcase your global contest rating, max tier (Grandmaster), and problem masteries to the world!'
   },
   codechef: {
@@ -90,6 +96,9 @@ export const PLATFORM_META = {
     badgeColor: 'bg-yellow-950/60 text-yellow-300 border-yellow-800/60',
     placeholder: 'e.g. gennady',
     bioField: 'About Me / Organization / Bio',
+    profileUrl: (h) => `https://www.codechef.com/users/${h}`,
+    editUrl: (h) => `https://www.codechef.com/users/${h}`,
+    editGuide: 'Edit Profile → About Me / Details',
     pitch: 'Display your star division and contest standings across global long & cook-off challenges.'
   },
   geeksforgeeks: {
@@ -98,6 +107,9 @@ export const PLATFORM_META = {
     badgeColor: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60',
     placeholder: 'e.g. geeks_master',
     bioField: 'Institution / Short Bio',
+    profileUrl: (h) => `https://auth.geeksforgeeks.org/user/${h}/`,
+    editUrl: (h) => `https://auth.geeksforgeeks.org/user/${h}/`,
+    editGuide: 'Edit Profile → Basic Details / Bio',
     pitch: 'Track your practice streak, POTD scores, and institution rank alongside your other achievements.'
   },
   atcoder: {
@@ -106,6 +118,9 @@ export const PLATFORM_META = {
     badgeColor: 'bg-sky-950/60 text-sky-300 border-sky-800/60',
     placeholder: 'e.g. chokudai',
     bioField: 'Affiliation / Country / Bio',
+    profileUrl: (h) => `https://atcoder.jp/users/${h}`,
+    editUrl: (h) => `https://atcoder.jp/users/${h}`,
+    editGuide: 'Settings → User Profile → Affiliation',
     pitch: 'Prove your algorithmic speed with Japanese & international ABC/ARC contest rating trends.'
   },
   github: {
@@ -114,14 +129,20 @@ export const PLATFORM_META = {
     badgeColor: 'bg-gray-900 text-gray-300 border-gray-700',
     placeholder: 'e.g. torvalds',
     bioField: 'Public Bio',
+    profileUrl: (h) => `https://github.com/${h}`,
+    editUrl: (h) => `https://github.com/${h}`,
+    editGuide: 'Edit Profile → Bio',
     pitch: 'Highlight your public repositories, contributions, and open-source commit streak in one place.'
   },
   linkedin: {
     name: 'LinkedIn',
     category: 'Professional Network',
     badgeColor: 'bg-blue-950/60 text-blue-300 border-blue-800/60',
-    placeholder: 'e.g. in/aditya-raj',
+    placeholder: 'e.g. john-doe',
     bioField: 'Headline or About / Summary',
+    profileUrl: (h) => `https://www.linkedin.com/in/${h.replace(/^in\//, '')}`,
+    editUrl: (h) => `https://www.linkedin.com/in/${h.replace(/^in\//, '')}`,
+    editGuide: 'View Profile → Edit Intro / About',
     pitch: 'Complete your developer identity by pairing your real coding stats with your verified professional profile.'
   }
 };

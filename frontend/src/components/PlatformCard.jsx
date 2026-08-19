@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, Trash2, Clock, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Copy, Check, Trash2, Clock, CheckCircle2, ShieldAlert, ExternalLink } from 'lucide-react';
 import { PlatformIcons, PLATFORM_META } from './PlatformIcons';
 
 const PlatformCard = ({ platformData, onUnlink }) => {
@@ -14,6 +14,8 @@ const PlatformCard = ({ platformData, onUnlink }) => {
   };
 
   const isVerified = status === 'verified';
+  const profileLink = meta.profileUrl ? meta.profileUrl(handle) : '#';
+  const editLink = meta.editUrl ? meta.editUrl(handle) : profileLink;
 
   const handleCopy = () => {
     if (!verificationCode) return;
@@ -46,7 +48,16 @@ const PlatformCard = ({ platformData, onUnlink }) => {
                   {meta.category}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-blue-400 mt-0.5 font-mono">@{handle}</p>
+              <a
+                href={profileLink}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-blue-400 hover:text-blue-300 hover:underline mt-0.5 font-mono group"
+                title={`Open @${handle} on ${meta.name}`}
+              >
+                <span>@{handle}</span>
+                <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+              </a>
             </div>
           </div>
 
@@ -68,7 +79,7 @@ const PlatformCard = ({ platformData, onUnlink }) => {
       {/* Card Body: Verification Code / Instructions */}
       <div className="p-5 bg-[#090E1A]/80 flex-1 space-y-3.5">
         {!isVerified ? (
-          <div className="bg-[#0F172A] p-4 rounded-xl border border-blue-900/40 space-y-2.5">
+          <div className="bg-[#0F172A] p-4 rounded-xl border border-blue-900/40 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
@@ -77,13 +88,14 @@ const PlatformCard = ({ platformData, onUnlink }) => {
               <span className="text-[10px] text-blue-400 font-medium">Step 1 of 2</span>
             </div>
 
+            {/* Code Box + Copy */}
             <div className="flex items-center gap-2">
               <div className="flex-1 bg-[#090D16] border border-blue-900/60 rounded-lg px-3 py-2 text-center font-mono text-base font-bold tracking-widest text-blue-300 select-all shadow-inner">
                 {verificationCode}
               </div>
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] shrink-0"
+                className="flex items-center gap-1 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] shrink-0 cursor-pointer"
                 title="Copy verification code"
               >
                 {copied ? (
@@ -100,9 +112,28 @@ const PlatformCard = ({ platformData, onUnlink }) => {
               </button>
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
-              👉 Temporarily paste this code into your <strong className="text-slate-200">{meta.name} {meta.bioField}</strong>.
-            </p>
+            {/* Direct Open Profile/Settings Button */}
+            <a
+              href={editLink}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-blue-950/70 hover:bg-blue-900/60 border border-blue-800/60 hover:border-blue-500/60 rounded-lg text-xs font-semibold text-blue-200 hover:text-white transition-all shadow-xs group"
+            >
+              <span>Open @{handle} on {meta.name}</span>
+              <ExternalLink className="w-3.5 h-3.5 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
+            </a>
+
+            {/* Guidance Text */}
+            <div className="text-[11px] text-slate-400 leading-relaxed bg-[#0B1120] p-2 rounded-lg border border-slate-800/80 space-y-0.5">
+              <p>
+                👉 Paste code in: <strong className="text-slate-200">{meta.name} {meta.bioField}</strong>
+              </p>
+              {meta.editGuide && (
+                <p className="text-slate-400">
+                  📍 <span className="text-blue-300 font-medium">{meta.editGuide}</span>
+                </p>
+              )}
+            </div>
           </div>
         ) : (
           <div className="p-3.5 bg-emerald-950/30 rounded-xl border border-emerald-900/50 flex items-center gap-3">
@@ -134,7 +165,7 @@ const PlatformCard = ({ platformData, onUnlink }) => {
           <button
             onClick={handleDelete}
             disabled={unlinking}
-            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
             title={`Unlink ${meta.name}`}
           >
             <Trash2 className="w-4 h-4" />
