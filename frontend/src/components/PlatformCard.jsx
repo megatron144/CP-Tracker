@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Copy, Check, Trash2, Clock, CheckCircle2, ShieldAlert, ExternalLink } from 'lucide-react';
+import { Copy, Check, Trash2, Clock, CheckCircle2, ShieldAlert, ExternalLink, ShieldCheck, Loader2 } from 'lucide-react';
 import { PlatformIcons, PLATFORM_META } from './PlatformIcons';
 
-const PlatformCard = ({ platformData, onUnlink }) => {
+const PlatformCard = ({ platformData, onUnlink, onVerifySuccess }) => {
   const [copied, setCopied] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
 
   const { platform, handle, status, verificationCode, createdAt } = platformData;
   const meta = PLATFORM_META[platform] || {
@@ -29,6 +31,36 @@ const PlatformCard = ({ platformData, onUnlink }) => {
       setUnlinking(true);
       await onUnlink(platform);
       setUnlinking(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    setVerifying(true);
+    setVerifyError('');
+
+    try {
+      const token = JSON.parse(localStorage.getItem('user'))?.token;
+      const res = await fetch(`http://localhost:5001/api/profile/verify/${platform}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Verification failed. Please ensure the code is in your bio.');
+      }
+
+      if (onVerifySuccess) {
+        onVerifySuccess(data.platforms, data.message);
+      }
+    } catch (err) {
+      setVerifyError(err.message);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -134,6 +166,13 @@ const PlatformCard = ({ platformData, onUnlink }) => {
                 </p>
               )}
             </div>
+
+            {/* Verification Error Notice */}
+            {verifyError && (
+              <div className="p-2.5 bg-red-950/70 border border-red-800/80 rounded-lg text-xs text-red-300 leading-relaxed animate-in fade-in duration-200">
+                {verifyError}
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-3.5 bg-emerald-950/30 rounded-xl border border-emerald-900/50 flex items-center gap-3">
@@ -154,11 +193,22 @@ const PlatformCard = ({ platformData, onUnlink }) => {
         <div className="flex items-center gap-2">
           {!isVerified && (
             <button
-              disabled
-              className="px-2.5 py-1 text-slate-500 bg-slate-900 border border-slate-800 rounded-md font-medium text-xs cursor-not-allowed"
-              title="Verification check will be wired in Phase 3"
+              onClick={handleVerify}
+              disabled={verifying}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold text-xs transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] disabled:opacity-50 cursor-pointer"
+              title="Verify that code is in your bio"
             >
-              Verify Bio (Phase 3)
+              {verifying ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Checking...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Verify Bio</span>
+                </>
+              )}
             </button>
           )}
 

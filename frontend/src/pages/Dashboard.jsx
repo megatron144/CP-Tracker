@@ -47,6 +47,11 @@ const Dashboard = () => {
     showNotification('Platform linked! Check the verification code on the card.');
   };
 
+  const handleVerifySuccess = (updatedPlatforms, msg) => {
+    setProfile(prev => ({ ...prev, platforms: updatedPlatforms }));
+    showNotification(msg || 'Platform ownership verified successfully!');
+  };
+
   const handleUnlink = async (platformKey) => {
     try {
       const token = JSON.parse(localStorage.getItem('user'))?.token;
@@ -103,8 +108,8 @@ const Dashboard = () => {
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Welcome, {profile?.name || user?.name}!
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-950/80 text-blue-400 border border-blue-800/60 shadow-xs">
-                Phase 2 Active
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 shadow-xs">
+                Phase 3 Active
               </span>
             </div>
             <p className="text-sm text-slate-400">
@@ -205,6 +210,7 @@ const Dashboard = () => {
                 key={platformData.platform}
                 platformData={platformData}
                 onUnlink={handleUnlink}
+                onVerifySuccess={handleVerifySuccess}
               />
             ))}
           </div>
