@@ -1,9 +1,16 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Plus, ShieldCheck, Layers, Award, Activity, RotateCw, Trophy, Target, Flame } from 'lucide-react';
+import { 
+  Plus, ShieldCheck, Layers, Award, Activity, RotateCw, 
+  Trophy, Target, Flame, BarChart2, PieChart, CheckCircle2, Grid
+} from 'lucide-react';
 import PlatformCard from '../components/PlatformCard';
 import UnlinkedPlatformCard from '../components/UnlinkedPlatformCard';
 import LinkPlatformModal from '../components/LinkPlatformModal';
+import ClistRatingGraph from '../components/charts/ClistRatingGraph';
+import PlatformPieChartsGrid from '../components/charts/PlatformPieChartsGrid';
+import ActivityHeatmap from '../components/charts/ActivityHeatmap';
+import PlatformBreakdownBar from '../components/charts/PlatformBreakdownBar';
 import { PLATFORM_META } from '../components/PlatformIcons';
 import { API_BASE_URL } from '../config/api';
 
@@ -15,6 +22,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [syncingAll, setSyncingAll] = useState(false);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'analytics', 'platforms'
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -119,13 +127,12 @@ const Dashboard = () => {
     setIsModalOpen(true);
   };
 
-  const linkedPlatforms = profile?.platforms || [];
+  const linkedPlatforms = (profile?.platforms || []).filter(p => ALL_PLATFORMS.includes(p.platform));
   const linkedPlatformKeys = linkedPlatforms.map(p => p.platform);
   const unlinkedPlatformKeys = ALL_PLATFORMS.filter(key => !linkedPlatformKeys.includes(key));
 
   const verifiedPlatforms = linkedPlatforms.filter(p => p.status === 'verified');
   const verifiedCount = verifiedPlatforms.length;
-  const pendingCount = linkedPlatforms.filter(p => p.status === 'pending').length;
 
   // Aggregated live statistics
   const totalSolvedAll = verifiedPlatforms.reduce((acc, p) => acc + (p.stats?.totalSolved || 0), 0);
@@ -156,11 +163,11 @@ const Dashboard = () => {
                 Welcome, {profile?.name || user?.name}!
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 shadow-xs">
-                Phase 4 Active
+                Unified Portfolio
               </span>
             </div>
             <p className="text-sm text-slate-400">
-              Manage, verify, and synchronize live statistics across your competitive programming and developer profiles.
+              Your unified competitive programming command center & live portfolio analytics.
             </p>
           </div>
 
@@ -233,6 +240,45 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Navigation View Filter Tabs */}
+      <div className="flex items-center gap-2 border-b border-blue-950/80 pb-3">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs transition-all cursor-pointer ${
+            activeTab === 'overview'
+              ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+              : 'bg-[#0B1120] text-slate-400 hover:text-white hover:bg-slate-900 border border-blue-950/60'
+          }`}
+        >
+          <Grid className="w-3.5 h-3.5" />
+          <span>Unified Overview</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs transition-all cursor-pointer ${
+            activeTab === 'analytics'
+              ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+              : 'bg-[#0B1120] text-slate-400 hover:text-white hover:bg-slate-900 border border-blue-950/60'
+          }`}
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+          <span>Rating Timeline & Mastery</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('platforms')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs transition-all cursor-pointer ${
+            activeTab === 'platforms'
+              ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+              : 'bg-[#0B1120] text-slate-400 hover:text-white hover:bg-slate-900 border border-blue-950/60'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Connected Platforms ({linkedPlatforms.length})</span>
+        </button>
+      </div>
+
       {/* Loading Skeleton */}
       {loading && !profile && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -250,60 +296,86 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Section 1: Linked Platforms */}
-      {linkedPlatforms.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>Your Connected Platforms</span>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-400 border border-blue-800/50">
-                {linkedPlatforms.length}
-              </span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Paste the code into each profile's bio before verification, then sync live statistics.
-            </p>
-          </div>
+      {/* VIEW: OVERVIEW OR ANALYTICS (Charts & Visualizations) */}
+      {(activeTab === 'overview' || activeTab === 'analytics') && (
+        <div className="space-y-6">
+          {/* 1. Combined Unified Multi-Platform Rating Graph (CList Style) */}
+          <ClistRatingGraph platforms={linkedPlatforms} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {linkedPlatforms.map((platformData) => (
-              <PlatformCard
-                key={platformData.platform}
-                platformData={platformData}
-                onUnlink={handleUnlink}
-                onVerifySuccess={handleVerifySuccess}
-                onSyncSuccess={handleSyncSuccess}
-              />
-            ))}
+          {/* 2. Individual Mastery Pie / Donut Charts for LeetCode, Codeforces, CodeChef, AtCoder */}
+          <PlatformPieChartsGrid platforms={linkedPlatforms} />
+
+          {/* 3. 52-Week Activity Heatmap + Volume Breakdown Bar */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-7">
+              <ActivityHeatmap platforms={linkedPlatforms} />
+            </div>
+            <div className="lg:col-span-5">
+              <PlatformBreakdownBar platforms={linkedPlatforms} />
+            </div>
           </div>
         </div>
       )}
 
-      {/* Section 2: Available Platforms to Connect */}
-      {unlinkedPlatformKeys.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>Available Platforms to Connect</span>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800">
-                {unlinkedPlatformKeys.length} available
-              </span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Connect all platforms to build your complete unified competitive developer portfolio.
-            </p>
-          </div>
+      {/* VIEW: OVERVIEW OR PLATFORMS (Platform Cards List) */}
+      {(activeTab === 'overview' || activeTab === 'platforms') && (
+        <>
+          {/* Section 1: Linked Platforms */}
+          {linkedPlatforms.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>Your Connected Platforms</span>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-400 border border-blue-800/50">
+                    {linkedPlatforms.length}
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Paste the code into each profile's bio before verification, then sync live statistics.
+                </p>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {unlinkedPlatformKeys.map((key) => (
-              <UnlinkedPlatformCard
-                key={key}
-                platformKey={key}
-                onConnect={openConnectModal}
-              />
-            ))}
-          </div>
-        </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {linkedPlatforms.map((platformData) => (
+                  <PlatformCard
+                    key={platformData.platform}
+                    platformData={platformData}
+                    onUnlink={handleUnlink}
+                    onVerifySuccess={handleVerifySuccess}
+                    onSyncSuccess={handleSyncSuccess}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section 2: Available Platforms to Connect */}
+          {unlinkedPlatformKeys.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>Available Platforms to Connect</span>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800">
+                    {unlinkedPlatformKeys.length} available
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Connect all platforms to build your complete unified competitive developer portfolio.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {unlinkedPlatformKeys.map((key) => (
+                  <UnlinkedPlatformCard
+                    key={key}
+                    platformKey={key}
+                    onConnect={openConnectModal}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Link Platform Modal */}

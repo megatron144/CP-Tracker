@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   Copy, Check, Trash2, Clock, CheckCircle2, ShieldAlert, 
   ExternalLink, ShieldCheck, Loader2, RotateCw, Award, 
-  Trophy, Target, Flame, Calendar
+  Trophy, Target, Flame, Calendar, Edit3
 } from 'lucide-react';
 import { PlatformIcons, PLATFORM_META } from './PlatformIcons';
 import { API_BASE_URL } from '../config/api';
@@ -24,7 +24,6 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
 
   const isVerified = status === 'verified';
   const cleanDisplayHandle = (handle || '')
-    .replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '')
     .replace(/^https?:\/\/(www\.)?leetcode\.com\/(u\/)?/i, '')
     .replace(/^https?:\/\/(www\.)?codeforces\.com\/profile\//i, '')
     .replace(/^https?:\/\/(www\.)?codechef\.com\/users\//i, '')
@@ -134,9 +133,6 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="font-bold text-white text-base tracking-wide">{meta.name}</h4>
-                <span className="text-[10px] font-semibold text-blue-400/80 uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-950/60 border border-blue-900/50">
-                  {meta.category}
-                </span>
               </div>
               <a
                 href={profileLink}
@@ -232,33 +228,70 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
               </div>
             )}
           </div>
-        ) : platform === 'linkedin' ? (
-          /* LINKEDIN VERIFIED: Professional Identity Display */
-          <div className="p-4 bg-[#0F172A] rounded-xl border border-blue-900/50 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Professional Profile
-              </span>
-              <span className="text-[10px] font-semibold text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-900/50">
-                Connected
-              </span>
+        ) : platform === 'github' ? (
+          /* GITHUB VERIFIED: Repos, Stars, Max Commits/Month, Followers */
+          <div className="space-y-3.5">
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* Stat 1: Public Repositories */}
+              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">Public Repos</span>
+                  <Target className="w-3.5 h-3.5 text-emerald-400" />
+                </div>
+                <span className="text-lg font-extrabold text-white tracking-tight">
+                  {stats?.extra?.publicRepos !== undefined ? stats.extra.publicRepos : stats?.totalSolved || 0}
+                </span>
+              </div>
+
+              {/* Stat 2: Total Stars */}
+              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">Total Stars</span>
+                  <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                </div>
+                <span className="text-lg font-extrabold text-amber-300 tracking-tight">
+                  ★ {stats?.extra?.totalStars !== undefined ? stats.extra.totalStars : stats?.rating || 0}
+                </span>
+              </div>
+
+              {/* Stat 3: Max Commits in a Month */}
+              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">Peak Commits/Mo</span>
+                  <Flame className="w-3.5 h-3.5 text-red-400" />
+                </div>
+                <span className="text-lg font-extrabold text-white tracking-tight">
+                  {stats?.extra?.maxMonthlyCommits ? `${stats.extra.maxMonthlyCommits}` : '—'}
+                </span>
+              </div>
+
+              {/* Stat 4: Followers & Forks */}
+              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">Followers</span>
+                  <Award className="w-3.5 h-3.5 text-blue-400" />
+                </div>
+                <span className="text-lg font-extrabold text-white tracking-tight">
+                  {stats?.extra?.followers !== undefined ? stats.extra.followers : stats?.maxRating || 0}
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-slate-300">
-              Verified LinkedIn profile for <strong className="text-white">@{cleanDisplayHandle}</strong>.
-            </p>
-            <a
-              href={profileLink}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white rounded-lg text-xs font-semibold transition-all shadow-xs"
-            >
-              <span>Open on LinkedIn</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+
+            {/* Breakdown Pill */}
+            <div className="flex items-center justify-between gap-1.5 p-2 bg-[#0B1120] rounded-xl border border-slate-800/80 text-[11px]">
+              <span className="text-amber-300 font-semibold">★ {stats?.extra?.totalStars || 0} Stars</span>
+              <span className="text-blue-300 font-semibold">🍴 {stats?.extra?.totalForks || 0} Forks</span>
+              <span className="text-purple-300 font-semibold">💻 {stats?.extra?.topLanguage || 'Code'}</span>
+            </div>
+
+            {syncError && (
+              <div className="p-2.5 bg-red-950/70 border border-red-800/80 rounded-lg text-xs text-red-300 leading-relaxed animate-in fade-in duration-200">
+                {syncError}
+              </div>
+            )}
           </div>
         ) : (
-          /* VERIFIED STATE: Normalized Stats Display */
+          /* STANDARD VERIFIED STATE: Competitive Programming Stats */
           <div className="space-y-3.5">
             {/* Stats Metric Cards Grid */}
             <div className="grid grid-cols-2 gap-2.5">
@@ -280,12 +313,10 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
                 </div>
               </div>
 
-              {/* Stat 2: Total Solved / Repos */}
+              {/* Stat 2: Total Solved */}
               <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
                 <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">
-                    {platform === 'github' ? 'Public Repos' : 'Solved'}
-                  </span>
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">Solved</span>
                   <Target className="w-3.5 h-3.5 text-emerald-400" />
                 </div>
                 <span className="text-lg font-extrabold text-white tracking-tight">
@@ -307,39 +338,57 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
               {/* Stat 4: Contests Participated */}
               <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
                 <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">
-                    {platform === 'github' ? 'Gists' : 'Contests'}
-                  </span>
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">Contests</span>
                   <Calendar className="w-3.5 h-3.5 text-purple-400" />
                 </div>
                 <span className="text-lg font-extrabold text-white tracking-tight">
-                  {stats?.contestsGiven || stats?.extra?.publicGists || 0}
+                  {stats?.contestsGiven || 0}
                 </span>
               </div>
             </div>
 
-            {/* Extra Breakdown Pills (e.g. LeetCode Easy/Med/Hard, GitHub stars, etc.) */}
-            {platform === 'leetcode' && stats?.extra && (
-              <div className="flex items-center justify-between gap-1.5 p-2 bg-[#0B1120] rounded-xl border border-slate-800/80 text-[11px]">
-                <span className="text-emerald-400 font-semibold">Easy: {stats.extra.easy || 0}</span>
-                <span className="text-amber-400 font-semibold">Med: {stats.extra.medium || 0}</span>
-                <span className="text-red-400 font-semibold">Hard: {stats.extra.hard || 0}</span>
-              </div>
-            )}
-
-            {platform === 'github' && stats?.extra && (
-              <div className="flex items-center justify-between gap-1.5 p-2 bg-[#0B1120] rounded-xl border border-slate-800/80 text-[11px]">
-                <span className="text-amber-300 font-semibold">★ Stars: {stats.extra.totalStars || 0}</span>
-                <span className="text-blue-300 font-semibold">Followers: {stats.extra.followers || 0}</span>
-              </div>
-            )}
-
-            {platform === 'atcoder' && stats?.extra && (
-              <div className="flex items-center justify-between gap-1.5 p-2 bg-[#0B1120] rounded-xl border border-slate-800/80 text-[11px]">
-                <span className="text-sky-300 font-semibold">Tier: {stats.rank || 'Rated'}</span>
-                {stats.extra.globalRank && (
-                  <span className="text-slate-400 font-mono">Rank: {stats.extra.globalRank}</span>
-                )}
+            {/* Top 3 Best Contest Finishes Widget for All Coding Platforms */}
+            {['leetcode', 'codeforces', 'codechef', 'atcoder'].includes(platform) && (
+              <div className="p-2.5 bg-[#0B1120] rounded-xl border border-blue-900/50 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                  <span className="flex items-center gap-1 text-amber-400">
+                    <Trophy className="w-3.5 h-3.5" />
+                    Best Contest Finishes
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-1.5 text-xs">
+                  {stats?.extra?.topRanks && stats.extra.topRanks.length > 0 ? (
+                    stats.extra.topRanks.slice(0, 3).map((rk, idx) => (
+                      <span
+                        key={idx}
+                        className={`px-2 py-1 rounded-lg font-bold text-[11px] truncate flex-1 text-center border ${
+                          idx === 0
+                            ? 'bg-amber-950/50 text-amber-300 border-amber-800/60 shadow-[0_0_10px_rgba(245,158,11,0.15)]'
+                            : idx === 1
+                            ? 'bg-slate-800/60 text-slate-200 border-slate-700'
+                            : 'bg-orange-950/40 text-orange-300 border-orange-900/50'
+                        }`}
+                      >
+                        {idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : '🥉 '}
+                        {rk}
+                      </span>
+                    ))
+                  ) : (
+                    <div className="flex items-center justify-between w-full gap-1.5">
+                      <span className="px-2 py-1 rounded-lg font-semibold text-[11px] bg-amber-950/40 text-amber-300 border border-amber-900/50 flex-1 text-center">
+                        🥇 {stats?.rank || (stats?.rating ? `#${stats.rating}` : 'Top Rank')}
+                      </span>
+                      {stats?.maxRating && (
+                        <span className="px-2 py-1 rounded-lg font-semibold text-[11px] bg-slate-800/60 text-slate-200 border border-slate-700 flex-1 text-center">
+                          🥈 Max {stats.maxRating}
+                        </span>
+                      )}
+                      <span className="px-2 py-1 rounded-lg font-semibold text-[11px] bg-orange-950/30 text-orange-300 border border-orange-900/40 flex-1 text-center">
+                        🥉 Active
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

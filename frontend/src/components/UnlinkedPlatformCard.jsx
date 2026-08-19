@@ -21,9 +21,6 @@ const UnlinkedPlatformCard = ({ platformKey, onConnect }) => {
               <h4 className="font-bold text-slate-200 text-sm group-hover:text-blue-400 transition-colors">
                 {meta.name}
               </h4>
-              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-                {meta.category}
-              </span>
             </div>
           </div>
 
