@@ -4,6 +4,7 @@ require('dotenv').config();
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const { startBackgroundSync } = require('./services/cronService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,6 +25,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'CP-Tracker Backend is running!' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend server running on:`);
+  console.log(`  > Local:   http://localhost:${PORT}`);
+  console.log(`  > Network: http://0.0.0.0:${PORT}`);
+  // Start scheduled background stats refresh (every 6 hours)
+  startBackgroundSync();
 });

@@ -32,10 +32,10 @@ The frontend will typically run on `http://localhost:5173`.
 
 ## Phases (Intern Tracking)
 - [x] Phase 0: Project Setup
-- [ ] Phase 1: Auth System
-- [ ] Phase 2: User Profile & Platform Linking
-- [ ] Phase 3: Verification Logic
-- [ ] Phase 4: Data Fetching & Normalization
+- [x] Phase 1: Auth System
+- [x] Phase 2: User Profile & Platform Linking
+- [x] Phase 3: Verification Logic
+- [x] Phase 4: Data Fetching & Normalization
 - [ ] Phase 5: Dashboard UI
 - [ ] Phase 6: Public Profile Page
 - [ ] Phase 7: Polish

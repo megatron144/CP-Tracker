@@ -1,10 +1,20 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
+const statsSchema = new mongoose.Schema({
+  totalSolved: { type: Number, default: 0 },
+  rating: { type: Number, default: null },
+  maxRating: { type: Number, default: null },
+  rank: { type: String, default: null },
+  contestsGiven: { type: Number, default: 0 },
+  lastSynced: { type: Date, default: null },
+  extra: { type: mongoose.Schema.Types.Mixed, default: {} }
+}, { _id: false });
+
 const platformSchema = new mongoose.Schema({
   platform: {
     type: String,
-    enum: ['leetcode', 'codeforces', 'codechef', 'geeksforgeeks', 'github', 'atcoder', 'linkedin'],
+    enum: ['leetcode', 'codeforces', 'codechef', 'github', 'atcoder'],
     required: true
   },
   handle: {
@@ -23,6 +33,10 @@ const platformSchema = new mongoose.Schema({
   },
   verifiedAt: {
     type: Date
+  },
+  stats: {
+    type: statsSchema,
+    default: () => ({})
   }
 }, {
   timestamps: true

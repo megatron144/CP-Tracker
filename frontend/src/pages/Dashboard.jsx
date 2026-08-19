@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { 
   Plus, ShieldCheck, Layers, Award, Activity, RotateCw, 
-  Trophy, Target, Flame, BarChart2, PieChart, CheckCircle2, Grid
+  Trophy, Target, Flame, BarChart2, PieChart, CheckCircle2, Grid, Share2
 } from 'lucide-react';
 import PlatformCard from '../components/PlatformCard';
 import UnlinkedPlatformCard from '../components/UnlinkedPlatformCard';
@@ -171,7 +171,22 @@ const Dashboard = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Share Public Portfolio Button */}
+            <button
+              onClick={() => {
+                const username = profile?.email ? profile.email.split('@')[0] : (user?.email ? user.email.split('@')[0] : profile?._id);
+                const publicUrl = `${window.location.origin}/u/${username}`;
+                navigator.clipboard.writeText(publicUrl);
+                showNotification(`Public Portfolio link copied to clipboard: /u/${username}`);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#0B1120] hover:bg-slate-800/80 text-emerald-400 hover:text-emerald-300 border border-emerald-900/60 hover:border-emerald-500/50 font-semibold text-sm rounded-xl transition-all shadow-xs cursor-pointer"
+              title="Copy shareable public profile link"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Share Profile</span>
+            </button>
+
             {/* Global Sync All Button */}
             {verifiedCount > 0 && (
               <button
