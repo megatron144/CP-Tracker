@@ -19,7 +19,26 @@ const syncUserPlatforms = async (userId) => {
       if (p.status === 'verified') {
         try {
           const stats = await fetchPlatformStats(p.platform, p.handle);
-          user.platforms[i].stats = stats;
+          const prevSolved = Number(p.stats?.totalSolved) || 0;
+          const newSolved = Number(stats.totalSolved) || 0;
+
+          // Sanity Safeguard: Alert and protect if solved count drops unexpectedly (>30% drop when prev > 10)
+          if (prevSolved > 10 && newSolved < prevSolved * 0.7) {
+            console.warn(`⚠️ [AutoSync Safeguard] Anomaly for @${p.handle} on ${p.platform}: incoming totalSolved (${newSolved}) dropped from verified total (${prevSolved}). Retaining higher verified count.`);
+            user.platforms[i].stats = {
+              ...stats,
+              totalSolved: prevSolved,
+              extra: {
+                ...stats.extra,
+                safeguardTriggered: true,
+                previousSolved: prevSolved,
+                attemptedSolved: newSolved
+              }
+            };
+          } else {
+            user.platforms[i].stats = stats;
+          }
+
           hasUpdates = true;
           await delay(500); // 500ms delay between fetches
         } catch (err) {

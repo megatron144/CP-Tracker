@@ -57,7 +57,12 @@ const fetchLeetCodeStats = async (handle) => {
       }
       userContestRankingHistory(username: $username) {
         attended
+        rating
         ranking
+        contest {
+          title
+          startTime
+        }
       }
     }
   `;
@@ -91,16 +96,16 @@ const fetchLeetCodeStats = async (handle) => {
     const rank = contest.badge?.name || (contest.globalRanking ? `#${contest.globalRanking.toLocaleString()}` : (data.matchedUser.profile?.ranking ? `#${data.matchedUser.profile.ranking.toLocaleString()}` : null));
     const contestsGiven = contest.attendedContestsCount || 0;
 
-    // Compute Top 3 contest ranks achieved
+    // Compute Top 3 contest ranks achieved with Contest Name and Date
     let topRanks = [];
     const history = (data.userContestRankingHistory || []).filter(h => h.attended && h.ranking > 0);
     if (history.length > 0) {
       const sortedHistory = [...history].sort((a, b) => a.ranking - b.ranking);
-      topRanks = sortedHistory.slice(0, 3).map(h => `#${h.ranking.toLocaleString()}`);
-    } else {
-      if (contest.globalRanking) topRanks.push(`Global #${contest.globalRanking.toLocaleString()}`);
-      if (contest.topPercentage) topRanks.push(`Top ${contest.topPercentage}%`);
-      if (data.matchedUser.profile?.ranking) topRanks.push(`Rank #${data.matchedUser.profile.ranking.toLocaleString()}`);
+      topRanks = sortedHistory.slice(0, 3).map(h => ({
+        rank: h.ranking,
+        contestName: h.contest?.title || 'LeetCode Weekly Contest',
+        date: h.contest?.startTime ? new Date(h.contest.startTime * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+      }));
     }
 
     return createNormalizedStats({
@@ -116,7 +121,7 @@ const fetchLeetCodeStats = async (handle) => {
         hard: hardSolved,
         topPercentage: contest.topPercentage || null,
         globalRanking: contest.globalRanking || data.matchedUser.profile?.ranking || null,
-        topRanks: topRanks.slice(0, 3)
+        topRanks
       }
     });
   } catch (err) {
@@ -169,14 +174,14 @@ const fetchCodeforcesStats = async (handle) => {
       if (ratingRes.data.status === 'OK' && Array.isArray(ratingRes.data.result)) {
         contestsGiven = ratingRes.data.result.length;
         const sorted = [...ratingRes.data.result].sort((a, b) => (a.rank || 999999) - (b.rank || 999999));
-        topRanks = sorted.slice(0, 3).map(c => `#${c.rank.toLocaleString()}`);
+        topRanks = sorted.slice(0, 3).map(c => ({
+          rank: c.rank,
+          contestName: c.contestName || `Codeforces Round #${c.contestId}`,
+          date: c.ratingUpdateTimeSeconds ? new Date(c.ratingUpdateTimeSeconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+        }));
       }
     } catch {
       // Ignore
-    }
-
-    if (topRanks.length === 0 && user.rank) {
-      topRanks = [`${user.rank}`, `Max: ${user.maxRank || user.rank}`, `Rating: ${user.rating || 'Unrated'}`];
     }
 
     return createNormalizedStats({
@@ -191,7 +196,7 @@ const fetchCodeforcesStats = async (handle) => {
         contribution: user.contribution || 0,
         friendOfCount: user.friendOfCount || 0,
         organization: user.organization || null,
-        topRanks: topRanks.slice(0, 3)
+        topRanks
       }
     });
   } catch (err) {
@@ -251,21 +256,22 @@ const fetchCodeChefStats = async (handle) => {
       if (ratingArrayMatch) {
         const ratingHistory = JSON.parse(ratingArrayMatch[1]);
         if (Array.isArray(ratingHistory)) {
-          const validRanks = ratingHistory
-            .map(c => parseInt(c.rank || c.global_rank, 10))
-            .filter(r => !isNaN(r) && r > 0)
-            .sort((a, b) => a - b);
-          topRanks = validRanks.slice(0, 3).map(r => `#${r.toLocaleString()}`);
+          const sorted = [...ratingHistory]
+            .filter(c => {
+              const r = parseInt(c.rank || c.global_rank, 10);
+              return !isNaN(r) && r > 0;
+            })
+            .sort((a, b) => parseInt(a.rank || a.global_rank, 10) - parseInt(b.rank || b.global_rank, 10));
+
+          topRanks = sorted.slice(0, 3).map(c => ({
+            rank: parseInt(c.rank || c.global_rank, 10),
+            contestName: c.name || c.code || 'CodeChef Challenge',
+            date: c.end_date ? new Date(c.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (c.getyear ? `${c.getmonth || ''} ${c.getyear}` : null)
+          }));
         }
       }
     } catch {
       // Ignore
-    }
-
-    if (topRanks.length === 0) {
-      if (globalRankText) topRanks.push(`Global #${globalRankText}`);
-      if (countryRankText) topRanks.push(`Country #${countryRankText}`);
-      if (stars) topRanks.push(`${stars} Division`);
     }
 
     return createNormalizedStats({
@@ -279,7 +285,7 @@ const fetchCodeChefStats = async (handle) => {
         stars: stars || null,
         globalRank: globalRankText || null,
         countryRank: countryRankText || null,
-        topRanks: topRanks.slice(0, 3)
+        topRanks
       }
     });
   } catch (err) {
@@ -382,25 +388,25 @@ const fetchAtCoderStats = async (handle) => {
         const $hist = cheerio.load(historyRes.data);
         const contestRanks = [];
         $hist('table.table tbody tr').each((i, tr) => {
+          const dateText = $hist(tr).find('td').eq(0).text().trim();
+          const contestLink = $hist(tr).find('td').eq(1).find('a').text().trim() || $hist(tr).find('td').eq(1).text().trim();
           const rankText = $hist(tr).find('td').eq(2).text().trim();
           const r = parseInt(rankText, 10);
           if (!isNaN(r) && r > 0) {
-            contestRanks.push(r);
+            contestRanks.push({
+              rank: r,
+              contestName: contestLink || 'AtCoder Contest',
+              date: dateText ? new Date(dateText).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+            });
           }
         });
         if (contestRanks.length > 0) {
-          contestRanks.sort((a, b) => a - b);
-          topRanks = contestRanks.slice(0, 3).map(r => `#${r.toLocaleString()}`);
+          contestRanks.sort((a, b) => a.rank - b.rank);
+          topRanks = contestRanks.slice(0, 3);
         }
       }
     } catch {
       // Ignore
-    }
-
-    if (topRanks.length === 0) {
-      if (globalRank) topRanks.push(`Global #${globalRank}`);
-      if (kyuDanRank) topRanks.push(`${kyuDanRank} Tier`);
-      if (maxRating) topRanks.push(`Peak ${maxRating}`);
     }
 
     const rank = kyuDanRank || (globalRank || (rating ? `${rating} Rating` : null));
@@ -416,7 +422,7 @@ const fetchAtCoderStats = async (handle) => {
         highestRating: maxRating || rating,
         globalRank: globalRank || null,
         kyuDan: kyuDanRank || null,
-        topRanks: topRanks.slice(0, 3)
+        topRanks
       }
     });
   } catch (err) {
@@ -535,88 +541,202 @@ const fetchGitHubStats = async (handle) => {
 };
 
 /**
- * 6. GeeksforGeeks Fetcher (Scraper / Public Profile)
+ * 6. GeeksforGeeks Fetcher (Accurate Next.js RSC Payload & Practice Scraper)
  */
 const fetchGFGStats = async (handle) => {
   const cleanHandle = handle.trim();
   let totalSolved = 0;
   let codingScore = null;
   let rank = null;
+  let longestStreak = 0;
   let contestsCount = 0;
+  let contestRating = null;
+  let maxContestRating = null;
+  let topRanks = [];
+  let stars = null;
   let difficultyBreakdown = { school: 0, basic: 0, easy: 0, medium: 0, hard: 0 };
+  let allPayload = '';
 
+  // 1. Fetch Official Contest Rating & Contest History API
   try {
-    const res = await axios.get(`https://www.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/`, {
+    const ratingRes = await axios.get(`https://practiceapi.geeksforgeeks.org/api/v1/rating/${encodeURIComponent(cleanHandle)}/info/`, {
       headers: {
         'User-Agent': BROWSER_UA,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        'Accept': 'application/json, text/plain, */*'
       },
       timeout: DEFAULT_TIMEOUT
     });
 
-    if (res.status === 200 && res.data) {
-      const $ = cheerio.load(res.data);
-      const text = $('body').text();
-
-      // Extract problems solved
-      const solvedMatch = text.match(/Problems?\s+Solved\s*[:\n\r\t]*(\d+)/i) || 
-                          text.match(/(\d+)\s+problems?\s+solved/i);
-      if (solvedMatch) {
-        totalSolved = parseInt(solvedMatch[1], 10);
+    const ratingData = ratingRes.data;
+    if (ratingData && typeof ratingData === 'object') {
+      if (ratingData.user_stars && ratingData.user_stars !== '-') {
+        stars = `${ratingData.user_stars} Star`;
+      }
+      if (ratingData.user_global_rank && ratingData.user_global_rank !== '-') {
+        rank = ratingData.user_global_rank;
       }
 
-      // Extract score
-      const scoreMatch = text.match(/Coding\s+Score\s*[:\n\r\t]*(\d+)/i) ||
-                         text.match(/Score\s*[:\n\r\t]*(\d+)/i);
-      if (scoreMatch) {
-        codingScore = parseInt(scoreMatch[1], 10);
-      }
+      const contestInfo = ratingData.user_contest_data;
+      if (contestInfo) {
+        if (typeof contestInfo.current_rating === 'number' && !isNaN(contestInfo.current_rating) && contestInfo.current_rating > 0) {
+          contestRating = contestInfo.current_rating;
+        }
+        if (typeof contestInfo.no_of_participated_contest === 'number') {
+          contestsCount = contestInfo.no_of_participated_contest;
+        }
 
-      // Extract rank
-      const rankMatch = text.match(/Overall\s+Rank\s*[:\n\r\t]*(\d+)/i) ||
-                        text.match(/Institute\s+Rank\s*[:\n\r\t]*(\d+)/i);
-      if (rankMatch) {
-        rank = rankMatch[1];
-      }
+        if (Array.isArray(contestInfo.contest_data) && contestInfo.contest_data.length > 0) {
+          const ratings = contestInfo.contest_data
+            .map(c => parseInt(c.rating || c.current_rating || c.user_rating, 10))
+            .filter(r => !isNaN(r) && r > 0);
+          if (ratings.length > 0) {
+            maxContestRating = Math.max(...ratings);
+            if (!contestRating) {
+              contestRating = ratings[ratings.length - 1];
+            }
+          }
 
-      // Difficulty breakdown matches
-      const easyMatch = text.match(/Easy\s*\((\d+)\)/i);
-      if (easyMatch) difficultyBreakdown.easy = parseInt(easyMatch[1], 10);
-      const medMatch = text.match(/Medium\s*\((\d+)\)/i);
-      if (medMatch) difficultyBreakdown.medium = parseInt(medMatch[1], 10);
-      const hardMatch = text.match(/Hard\s*\((\d+)\)/i);
-      if (hardMatch) difficultyBreakdown.hard = parseInt(hardMatch[1], 10);
-      const schoolMatch = text.match(/School\s*\((\d+)\)/i);
-      if (schoolMatch) difficultyBreakdown.school = parseInt(schoolMatch[1], 10);
-      const basicMatch = text.match(/Basic\s*\((\d+)\)/i);
-      if (basicMatch) difficultyBreakdown.basic = parseInt(basicMatch[1], 10);
+          const validRanks = contestInfo.contest_data
+            .filter(c => {
+              const rk = parseInt(c.rank || c.user_rank || c.global_rank, 10);
+              return !isNaN(rk) && rk > 0;
+            })
+            .sort((a, b) => parseInt(a.rank || a.user_rank || a.global_rank, 10) - parseInt(b.rank || b.user_rank || b.global_rank, 10));
 
-      // If totalSolved was 0, sum difficulties
-      const diffSum = difficultyBreakdown.school + difficultyBreakdown.basic + difficultyBreakdown.easy + difficultyBreakdown.medium + difficultyBreakdown.hard;
-      if (totalSolved === 0 && diffSum > 0) {
-        totalSolved = diffSum;
+          topRanks = validRanks.slice(0, 3).map(c => ({
+            rank: parseInt(c.rank || c.user_rank || c.global_rank, 10),
+            contestName: c.contest_name || c.name || c.contest_slug || 'GFG Coding Contest',
+            date: c.date || c.contest_date || null
+          }));
+        }
       }
     }
-  } catch (err) {
-    if (err.response?.status === 404) {
-      throw new Error(`GeeksforGeeks user "${cleanHandle}" does not exist.`);
+  } catch {
+    // Non-fatal if rating API fails or returns non-200
+  }
+
+  // 2. Fetch Profile Pages & Practice RSC Streams
+  const endpoints = [
+    `https://www.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/`,
+    `https://auth.geeksforgeeks.org/user/${encodeURIComponent(cleanHandle)}/practice/`
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const res = await axios.get(url, {
+        headers: {
+          'User-Agent': BROWSER_UA,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        },
+        timeout: DEFAULT_TIMEOUT
+      });
+
+      if (res.status === 200 && res.data) {
+        const html = res.data;
+        const $ = cheerio.load(html);
+        allPayload += '\n' + html;
+
+        // Collect all script payloads (Next.js App Router RSC streams)
+        $('script').each((_, el) => {
+          const content = $(el).html() || '';
+          allPayload += '\n' + content;
+        });
+
+        // 1. Authoritative Total Problems Solved extraction
+        const totalSolvedPatterns = [
+          /\\"total_problems_solved\\":\s*(\d+)/i,
+          /"total_problems_solved":\s*(\d+)/i,
+          /total_problems_solved\\":(\d+)/i,
+          /\\"problems_solved\\":\s*(\d+)/i,
+          /"problems_solved":\s*(\d+)/i,
+          /problems_solved\\":(\d+)/i,
+          /"totalSolved":\s*(\d+)/i,
+          /totalSolved\\":(\d+)/i,
+          /(\d+)\s+problems?\s+solved/i,
+          /Problems?\s+Solved\s*[:\n\r\t]*(\d+)/i
+        ];
+
+        for (const pat of totalSolvedPatterns) {
+          const m = allPayload.match(pat);
+          if (m && parseInt(m[1], 10) > totalSolved) {
+            totalSolved = parseInt(m[1], 10);
+          }
+        }
+
+        // 2. Authoritative Coding Score extraction (Stored strictly as codingScore, NEVER rating)
+        const scorePatterns = [
+          /\\"score\\":\s*(\d+)/i,
+          /"score":\s*(\d+)/i,
+          /\\"coding_score\\":\s*(\d+)/i,
+          /"coding_score":\s*(\d+)/i,
+          /score\\":(\d+)/i,
+          /Coding\s+Score\s*[:\n\r\t]*(\d+)/i
+        ];
+
+        for (const pat of scorePatterns) {
+          const m = allPayload.match(pat);
+          if (m && (codingScore === null || parseInt(m[1], 10) > codingScore)) {
+            codingScore = parseInt(m[1], 10);
+          }
+        }
+
+        // 3. Streak & Rank extraction
+        const streakMatch = allPayload.match(/\\"pod_solved_longest_streak\\":\s*(\d+)/i) || 
+                            allPayload.match(/\\"streak\\":\s*(\d+)/i);
+        if (streakMatch) {
+          longestStreak = parseInt(streakMatch[1], 10);
+        }
+
+        if (!rank) {
+          const rankMatch = allPayload.match(/\\"global_rank\\":\s*\\"([^\\"]+)\\"/i) ||
+                            allPayload.match(/\\"institute_rank\\":\s*(\d+)/i);
+          if (rankMatch) {
+            rank = rankMatch[1];
+          }
+        }
+
+        // 4. Difficulty Breakdown extraction
+        const schoolMatch = allPayload.match(/\\"school\\":\s*(\d+)/i) || allPayload.match(/School\s*\((\d+)\)/i);
+        if (schoolMatch) difficultyBreakdown.school = parseInt(schoolMatch[1], 10);
+
+        const basicMatch = allPayload.match(/\\"basic\\":\s*(\d+)/i) || allPayload.match(/Basic\s*\((\d+)\)/i);
+        if (basicMatch) difficultyBreakdown.basic = parseInt(basicMatch[1], 10);
+
+        const easyMatch = allPayload.match(/\\"easy\\":\s*(\d+)/i) || allPayload.match(/Easy\s*\((\d+)\)/i);
+        if (easyMatch) difficultyBreakdown.easy = parseInt(easyMatch[1], 10);
+
+        const medMatch = allPayload.match(/\\"medium\\":\s*(\d+)/i) || allPayload.match(/Medium\s*\((\d+)\)/i);
+        if (medMatch) difficultyBreakdown.medium = parseInt(medMatch[1], 10);
+
+        const hardMatch = allPayload.match(/\\"hard\\":\s*(\d+)/i) || allPayload.match(/Hard\s*\((\d+)\)/i);
+        if (hardMatch) difficultyBreakdown.hard = parseInt(hardMatch[1], 10);
+
+        const sumDifficulties = difficultyBreakdown.school + difficultyBreakdown.basic + difficultyBreakdown.easy + difficultyBreakdown.medium + difficultyBreakdown.hard;
+        if (sumDifficulties > totalSolved) {
+          totalSolved = sumDifficulties;
+        }
+      }
+    } catch (err) {
+      if (err.response?.status === 404 && url.includes('/user/')) {
+        throw new Error(`GeeksforGeeks user "${cleanHandle}" does not exist.`);
+      }
     }
   }
 
-  // Fallback defaults if zero
-  if (totalSolved === 0) totalSolved = 142;
-  if (!codingScore) codingScore = 485;
+  console.log(`[GFGFetcher] Cleaned stats for @${cleanHandle}: totalSolved=${totalSolved}, contestRating=${contestRating}, codingScore=${codingScore}, longestStreak=${longestStreak}, rank=${rank}`);
 
   return createNormalizedStats({
     platform: 'gfg',
-    totalSolved,
-    rating: codingScore,
-    maxRating: codingScore,
-    rank: rank || 'Rank #1,420',
-    contestsGiven: contestsCount || 12,
+    totalSolved: totalSolved,
+    rating: contestRating, // STRICTLY contest rating (or null if unrated), NEVER codingScore
+    maxRating: maxContestRating || contestRating || null,
+    rank: stars || (rank ? `#${rank}` : null),
+    contestsGiven: contestsCount,
     extra: {
-      codingScore,
-      difficultyBreakdown
+      codingScore: codingScore || 0, // Separately stored coding score
+      longestStreak,
+      difficultyBreakdown,
+      topRanks
     }
   });
 };

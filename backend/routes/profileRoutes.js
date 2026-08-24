@@ -360,9 +360,26 @@ router.post('/sync/:platform', protect, syncLimiter, async (req, res) => {
       return res.status(400).json({ message: `Please verify ${platformToSync} ownership before syncing stats.` });
     }
 
-    // Fetch fresh stats
-    const stats = await fetchPlatformStats(platformToSync, platformRecord.handle);
-    platformRecord.stats = stats;
+    // Fetch fresh stats with sanity safeguard
+    const freshStats = await fetchPlatformStats(platformToSync, platformRecord.handle);
+    const prevSolved = Number(platformRecord.stats?.totalSolved) || 0;
+    const newSolved = Number(freshStats.totalSolved) || 0;
+
+    if (prevSolved > 10 && newSolved < prevSolved * 0.7) {
+      console.warn(`⚠️ [ManualSync Safeguard] Anomaly for @${platformRecord.handle} on ${platformToSync}: incoming totalSolved (${newSolved}) dropped from verified total (${prevSolved}). Preserving higher verified count.`);
+      platformRecord.stats = {
+        ...freshStats,
+        totalSolved: prevSolved,
+        extra: {
+          ...freshStats.extra,
+          safeguardTriggered: true,
+          previousSolved: prevSolved,
+          attemptedSolved: newSolved
+        }
+      };
+    } else {
+      platformRecord.stats = freshStats;
+    }
 
     await user.save();
 
@@ -370,7 +387,7 @@ router.post('/sync/:platform', protect, syncLimiter, async (req, res) => {
       success: true,
       message: `${platformToSync} stats refreshed successfully!`,
       platforms: user.platforms,
-      stats
+      stats: platformRecord.stats
     });
   } catch (error) {
     res.status(500).json({
@@ -401,8 +418,25 @@ router.post('/sync-all', protect, syncLimiter, async (req, res) => {
       const p = user.platforms[i];
       if (p.status === 'verified') {
         try {
-          const stats = await fetchPlatformStats(p.platform, p.handle);
-          user.platforms[i].stats = stats;
+          const freshStats = await fetchPlatformStats(p.platform, p.handle);
+          const prevSolved = Number(p.stats?.totalSolved) || 0;
+          const newSolved = Number(freshStats.totalSolved) || 0;
+
+          if (prevSolved > 10 && newSolved < prevSolved * 0.7) {
+            console.warn(`⚠️ [SyncAll Safeguard] Anomaly for @${p.handle} on ${p.platform}: incoming totalSolved (${newSolved}) dropped from verified total (${prevSolved}). Preserving higher count.`);
+            user.platforms[i].stats = {
+              ...freshStats,
+              totalSolved: prevSolved,
+              extra: {
+                ...freshStats.extra,
+                safeguardTriggered: true,
+                previousSolved: prevSolved,
+                attemptedSolved: newSolved
+              }
+            };
+          } else {
+            user.platforms[i].stats = freshStats;
+          }
         } catch (err) {
           syncErrors.push(`${p.platform}: ${err.message}`);
         }

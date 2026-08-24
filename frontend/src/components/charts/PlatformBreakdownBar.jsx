@@ -6,6 +6,7 @@ const PLATFORM_THEMES = {
   codeforces: { bar: 'bg-blue-500', glow: 'shadow-[0_0_12px_rgba(59,130,246,0.3)]', text: 'text-blue-400' },
   codechef: { bar: 'bg-yellow-500', glow: 'shadow-[0_0_12px_rgba(234,179,8,0.3)]', text: 'text-yellow-400' },
   atcoder: { bar: 'bg-sky-500', glow: 'shadow-[0_0_12px_rgba(56,189,248,0.3)]', text: 'text-sky-400' },
+  gfg: { bar: 'bg-emerald-500', glow: 'shadow-[0_0_12px_rgba(16,185,129,0.3)]', text: 'text-emerald-400' },
   github: { bar: 'bg-purple-500', glow: 'shadow-[0_0_12px_rgba(168,85,247,0.3)]', text: 'text-purple-400' }
 };
 

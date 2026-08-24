@@ -139,6 +139,21 @@ const PlatformPieChartsGrid = ({ platforms = [] }) => {
     { label: 'ARC / Task E+', count: Math.max(0, acSolved - Math.round(acSolved * 0.55) - Math.round(acSolved * 0.32)), color: '#1E40AF' }
   ];
 
+  // 5. GeeksforGeeks breakdown by difficulty
+  const gfg = verified.find(p => p.platform === 'gfg');
+  const gfgTotal = gfg?.stats?.totalSolved || 0;
+  const diff = gfg?.stats?.extra?.difficultyBreakdown || {};
+  const gfgSchoolBasic = (diff.school || 0) + (diff.basic || 0);
+  const gfgEasy = (diff.easy || 0) + gfgSchoolBasic || Math.round(gfgTotal * 0.48);
+  const gfgMed = (diff.medium || 0) || Math.round(gfgTotal * 0.38);
+  const gfgHard = (diff.hard || 0) || Math.max(0, gfgTotal - gfgEasy - gfgMed);
+
+  const gfgSlices = [
+    { label: 'Easy / Basic', count: gfgEasy, color: '#10B981' },
+    { label: 'Medium', count: gfgMed, color: '#F59E0B' },
+    { label: 'Hard', count: gfgHard, color: '#EF4444' }
+  ];
+
   return (
     <div className="bg-[#0D1322] rounded-3xl p-6 sm:p-8 border border-blue-950/80 shadow-2xl space-y-6">
       {/* Header */}
@@ -158,8 +173,8 @@ const PlatformPieChartsGrid = ({ platforms = [] }) => {
         </div>
       </div>
 
-      {/* 4-Card Responsive Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 5-Card Responsive Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* 1. LeetCode */}
         <SingleDonut
           title="LeetCode"
@@ -194,6 +209,15 @@ const PlatformPieChartsGrid = ({ platforms = [] }) => {
           total={acSolved}
           slices={acSlices}
           centerLabel="Tasks"
+        />
+
+        {/* 5. GFG */}
+        <SingleDonut
+          title="GFG"
+          platform="gfg"
+          total={gfgTotal}
+          slices={gfgSlices}
+          centerLabel="Solved"
         />
       </div>
     </div>

@@ -14,6 +14,12 @@ const DifficultyPieChart = ({ platforms = [] }) => {
       easy += parseInt(p.stats.extra.easy, 10) || 0;
       medium += parseInt(p.stats.extra.medium, 10) || 0;
       hard += parseInt(p.stats.extra.hard, 10) || 0;
+      if (p.stats.extra.difficultyBreakdown) {
+        const d = p.stats.extra.difficultyBreakdown;
+        easy += (parseInt(d.easy, 10) || 0) + (parseInt(d.basic, 10) || 0) + (parseInt(d.school, 10) || 0);
+        medium += parseInt(d.medium, 10) || 0;
+        hard += parseInt(d.hard, 10) || 0;
+      }
     }
   });
 

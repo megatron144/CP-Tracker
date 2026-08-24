@@ -27,6 +27,8 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
   const isUnverified = status === 'unverified';
   const isPending = status === 'pending';
 
+  const topRanks = Array.isArray(stats?.extra?.topRanks) ? stats.extra.topRanks : [];
+
   const cleanDisplayHandle = (handle || '')
     .replace(/^https?:\/\/(www\.)?leetcode\.com\/(u\/)?/i, '')
     .replace(/^https?:\/\/(www\.)?codeforces\.com\/profile\//i, '')
@@ -332,47 +334,142 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
         {(isVerified || isUnverified) && (
           <div className="space-y-3">
             {stats && (stats.totalSolved > 0 || stats.rating > 0 || stats.contestsGiven > 0) ? (
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-                    <Target className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Problems Solved</span>
+              <>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
+                    <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                      <Target className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Problems Solved</span>
+                    </div>
+                    <p className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5">
+                      {stats.totalSolved?.toLocaleString() || 0}
+                    </p>
                   </div>
-                  <p className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5">
-                    {stats.totalSolved?.toLocaleString() || 0}
-                  </p>
+
+                  <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
+                    <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                      <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{platform === 'gfg' ? 'Contest Rating' : 'Current Rating'}</span>
+                    </div>
+                    <p className="text-lg font-extrabold text-amber-300 font-mono mt-0.5">
+                      {stats.rating ? stats.rating.toLocaleString() : '—'}
+                    </p>
+                  </div>
+
+                  <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
+                    <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                      <Flame className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Contests</span>
+                    </div>
+                    <p className="text-lg font-extrabold text-purple-300 font-mono mt-0.5">
+                      {stats.contestsGiven || 0}
+                    </p>
+                  </div>
+
+                  {platform === 'gfg' && stats?.extra?.codingScore ? (
+                    <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
+                      <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                        <Code2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Coding Score</span>
+                      </div>
+                      <p className="text-lg font-extrabold text-emerald-300 font-mono mt-0.5">
+                        {stats.extra.codingScore.toLocaleString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
+                      <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                        <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Max Rating</span>
+                      </div>
+                      <p className="text-lg font-extrabold text-blue-300 font-mono mt-0.5">
+                        {stats.maxRating ? stats.maxRating.toLocaleString() : '—'}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-                    <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Current Rating</span>
+                {/* Top 3 Contest Finishes Subsection */}
+                <div className="pt-2.5 border-t border-slate-800/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                      Top Contest Finishes
+                    </span>
+                    {topRanks.length > 0 && (
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        Best {topRanks.length} finish{topRanks.length > 1 ? 'es' : ''}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-lg font-extrabold text-amber-300 font-mono mt-0.5">
-                    {stats.rating ? stats.rating.toLocaleString() : '—'}
-                  </p>
-                </div>
 
-                <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-                    <Flame className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Contests</span>
-                  </div>
-                  <p className="text-lg font-extrabold text-purple-300 font-mono mt-0.5">
-                    {stats.contestsGiven || 0}
-                  </p>
-                </div>
+                  {topRanks.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {topRanks.map((item, idx) => {
+                        const rankNum = typeof item === 'object' ? item.rank : item;
+                        const contestTitle = typeof item === 'object' ? item.contestName : null;
+                        const contestDate = typeof item === 'object' ? item.date : null;
+                        
+                        // Medals styling: Gold (1st), Silver (2nd), Bronze (3rd)
+                        const badgeStyles = [
+                          'bg-amber-950/80 text-amber-300 border-amber-500/60 shadow-[0_0_10px_rgba(245,158,11,0.25)]',
+                          'bg-slate-800/80 text-slate-200 border-slate-500/60',
+                          'bg-orange-950/60 text-orange-300 border-orange-700/60'
+                        ];
+                        const medalNames = ['1st Best', '2nd Best', '3rd Best'];
 
-                <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Max Rating</span>
-                  </div>
-                  <p className="text-lg font-extrabold text-blue-300 font-mono mt-0.5">
-                    {stats.maxRating ? stats.maxRating.toLocaleString() : '—'}
-                  </p>
+                        return (
+                          <div
+                            key={idx}
+                            className={`p-2 rounded-xl border flex items-center justify-between gap-2.5 text-xs transition-all ${
+                              idx === 0
+                                ? 'bg-[#0B1120] border-amber-900/40 shadow-xs'
+                                : 'bg-[#090E1A] border-slate-800/80'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border font-mono shrink-0 ${badgeStyles[idx] || badgeStyles[1]}`}>
+                                #{typeof rankNum === 'number' ? rankNum.toLocaleString() : rankNum}
+                              </span>
+                              <div className="min-w-0">
+                                <p 
+                                  className="font-semibold text-slate-200 truncate text-[11px] hover:text-white"
+                                  title={contestTitle || `${meta.name} Contest`}
+                                >
+                                  {contestTitle || `${medalNames[idx]} Finish`}
+                                </p>
+                                {contestDate && (
+                                  <span className="text-[10px] text-slate-500 font-mono block">
+                                    {contestDate}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <span className="text-[10px] text-amber-400/90 font-mono font-semibold shrink-0">
+                              {medalNames[idx]}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : platform === 'gfg' ? (
+                    <div className="p-2.5 rounded-xl bg-[#090E1A] border border-emerald-950/60 text-[11px] text-slate-400 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-emerald-400/90">
+                        <Info className="w-3.5 h-3.5 shrink-0" />
+                        Contest history not available yet on GFG
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+                        Coming Soon
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 italic bg-[#090E1A] p-2 rounded-xl border border-slate-800/60 text-center">
+                      No official contest ranks recorded yet.
+                    </p>
+                  )}
                 </div>
-              </div>
+              </>
             ) : (
               <div className="text-center py-4 bg-[#0B1120] rounded-xl border border-slate-800/80 text-xs text-slate-400 space-y-2">
                 <p>No statistics cached yet.</p>

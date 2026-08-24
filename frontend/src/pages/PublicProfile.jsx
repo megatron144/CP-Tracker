@@ -270,9 +270,13 @@ const PublicProfile = () => {
                     </span>
                     <div className="flex items-center gap-1.5 text-[11px]">
                       {platformData.stats.extra.topRanks.slice(0, 3).map((rk, i) => (
-                        <span key={i} className="px-2 py-0.5 rounded bg-[#0F172A] text-slate-200 border border-slate-700 font-bold flex-1 text-center truncate">
+                        <span 
+                          key={i} 
+                          title={typeof rk === 'object' ? `${rk.contestName || ''} (${rk.date || ''})` : String(rk)}
+                          className="px-2 py-0.5 rounded bg-[#0F172A] text-slate-200 border border-slate-700 font-bold flex-1 text-center truncate font-mono text-[10px]"
+                        >
                           {i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : '🥉 '}
-                          {rk}
+                          {typeof rk === 'object' ? `#${rk.rank}` : rk}
                         </span>
                       ))}
                     </div>
