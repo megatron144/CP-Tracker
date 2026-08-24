@@ -43,6 +43,16 @@ export const PlatformIcons = ({ platform, className = "w-6 h-6" }) => {
           className={`${className} object-contain rounded-md`} 
         />
       );
+    case 'gfg':
+    case 'geeksforgeeks':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="24" height="24" rx="6" fill="#2F8D46" />
+          <path d="M7 8L4 12L7 16" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M17 8L20 12L17 16" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M13 7L11 17" stroke="#86EFAC" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
     default:
       return (
         <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -59,55 +69,83 @@ export const PLATFORM_META = {
     name: 'LeetCode',
     category: 'Competitive Programming',
     badgeColor: 'bg-amber-950/60 text-amber-300 border-amber-800/60',
+    primaryMethod: 'bio',
+    methodLabel: 'Bio / Profile Code',
+    methodReason: 'LeetCode does not provide open OAuth or public submission polling, so we verify via a quick one-time code in your About Me.',
     placeholder: 'e.g. neal_wu',
     bioField: 'Profile Summary / About Me',
     profileUrl: (h) => `https://leetcode.com/u/${h}/`,
-    editUrl: (h) => `https://leetcode.com/u/${h}/`,
-    editGuide: 'Profile / Settings → Summary / About Me',
+    editUrl: () => `https://leetcode.com/profile/`,
+    editGuide: 'Settings → Profile → Summary / About Me',
     pitch: 'Flaunt your daily streak, acceptance rate, and Hard problem tally on your unified portfolio!'
   },
   codeforces: {
     name: 'Codeforces',
     category: 'Competitive Programming',
     badgeColor: 'bg-blue-950/60 text-blue-300 border-blue-800/60',
+    primaryMethod: 'submission',
+    methodLabel: 'Submission Verification',
+    methodReason: 'Codeforces has an open public API. We verify instant ownership when you make a throwaway submission containing a verification token.',
+    problemTarget: {
+      id: '1A',
+      name: 'Theatre Square (1A)',
+      url: 'https://codeforces.com/problemset/problem/1/A'
+    },
     placeholder: 'e.g. tourist',
-    bioField: 'First Name / Last Name or City',
+    bioField: 'Settings → Social (First Name / City)',
     profileUrl: (h) => `https://codeforces.com/profile/${h}`,
-    editUrl: (h) => `https://codeforces.com/profile/${h}`,
-    editGuide: 'Settings → Social → First Name / City',
+    editUrl: () => `https://codeforces.com/settings/social`,
+    editGuide: 'Settings → Social → First Name / Native Name',
     pitch: 'Showcase your global contest rating, max tier (Grandmaster), and problem masteries to the world!'
   },
   codechef: {
     name: 'CodeChef',
     category: 'Competitive Programming',
     badgeColor: 'bg-yellow-950/60 text-yellow-300 border-yellow-800/60',
+    primaryMethod: 'submission',
+    methodLabel: 'Submission Verification',
+    methodReason: 'CodeChef public profiles do not expose bio fields. We verify account ownership via a throwaway submission to problem START01.',
+    disclaimer: 'Verification uses a community-maintained data source and may occasionally be slower or unavailable.',
+    problemTarget: {
+      id: 'START01',
+      name: 'Number Mirror (START01)',
+      url: 'https://www.codechef.com/problems/START01'
+    },
     placeholder: 'e.g. gennady',
-    bioField: 'Highest Degree Earned',
     profileUrl: (h) => `https://www.codechef.com/users/${h}`,
-    editUrl: (h) => `https://www.codechef.com/users/${h}`,
-    editGuide: 'Edit Profile → Highest Degree Earned',
     pitch: 'Display your star division and contest standings across global long & cook-off challenges.'
   },
   atcoder: {
     name: 'AtCoder',
     category: 'Competitive Programming',
     badgeColor: 'bg-sky-950/60 text-sky-300 border-sky-800/60',
+    primaryMethod: 'submission',
+    methodLabel: 'Submission Verification',
+    methodReason: 'We check your recent public submission history on AtCoder for the verification comment.',
+    problemTarget: {
+      id: 'practice_1',
+      name: 'Welcome to AtCoder (practice_1)',
+      url: 'https://atcoder.jp/contests/practice/tasks/practice_1'
+    },
     placeholder: 'e.g. chokudai',
     bioField: 'Affiliation',
     profileUrl: (h) => `https://atcoder.jp/users/${h}`,
-    editUrl: (h) => `https://atcoder.jp/settings`,
+    editUrl: () => `https://atcoder.jp/settings`,
     editGuide: 'Settings → User Profile → Affiliation',
     pitch: 'Prove your algorithmic speed with Japanese & international ABC/ARC contest rating trends.'
   },
-  github: {
-    name: 'GitHub',
-    category: 'Developer Portfolio',
-    badgeColor: 'bg-gray-900 text-gray-300 border-gray-700',
-    placeholder: 'e.g. torvalds',
-    bioField: 'Public Bio',
-    profileUrl: (h) => `https://github.com/${h}`,
-    editUrl: (h) => `https://github.com/${h}`,
+  gfg: {
+    name: 'GeeksforGeeks',
+    category: 'Competitive Programming',
+    badgeColor: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60',
+    primaryMethod: 'bio',
+    methodLabel: 'Bio / Profile Code',
+    methodReason: 'GeeksforGeeks public profiles display user bios. We verify ownership via a verification token placed in your GFG Bio.',
+    placeholder: 'e.g. sandeepjain',
+    bioField: 'Profile Bio',
+    profileUrl: (h) => `https://www.geeksforgeeks.org/user/${h}/`,
+    editUrl: () => `https://auth.geeksforgeeks.org/user/profile/edit`,
     editGuide: 'Edit Profile → Bio',
-    pitch: 'Highlight your public repositories, contributions, and open-source commit streak in one place.'
+    pitch: 'Display your GFG coding score, streak, institute rank, and solved problems count on your unified portfolio!'
   }
 };

@@ -51,13 +51,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateDisplayName = (newName) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = {
+        ...prev,
+        name: newName,
+        ...(prev.user ? { user: { ...prev.user, name: newName } } : {})
+      };
+      try {
+        localStorage.setItem('user', JSON.stringify(updated));
+      } catch (e) {
+        console.error('Error saving updated user:', e);
+      }
+      return updated;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateDisplayName }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,7 +9,7 @@ const { fetchPlatformStats } = require('../services/fetcherService');
 
 const router = express.Router();
 
-const VALID_PLATFORMS = ['leetcode', 'codeforces', 'codechef', 'github', 'atcoder'];
+const VALID_PLATFORMS = ['leetcode', 'codeforces', 'codechef', 'atcoder', 'gfg'];
 
 // Helper to generate unique verification code (e.g., CPT-A8F19B)
 const generateVerificationCode = () => {
@@ -99,6 +99,48 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
+// @route   PUT /api/profile/name
+// @desc    Update user display name (independent of platform handles)
+// @access  Private
+router.put('/name', protect, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ success: false, message: 'Display name is required' });
+    }
+
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 30) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Display name must be between 2 and 30 characters' 
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.name = trimmedName;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Display name updated to "${trimmedName}"`,
+      name: user.name,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        platforms: user.platforms || []
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error updating display name', error: error.message });
+  }
+});
+
 // Helper to sanitize handles when users paste full URLs
 const sanitizeHandle = (platform, rawHandle) => {
   if (!rawHandle) return '';
@@ -107,16 +149,18 @@ const sanitizeHandle = (platform, rawHandle) => {
        .replace(/^https?:\/\/(www\.)?codeforces\.com\/profile\//i, '')
        .replace(/^https?:\/\/(www\.)?codechef\.com\/users\//i, '')
        .replace(/^https?:\/\/(www\.)?atcoder\.jp\/users\//i, '')
+       .replace(/^https?:\/\/(auth\.)?geeksforgeeks\.org\/(user\/)?/i, '')
+       .replace(/^https?:\/\/(www\.)?geeksforgeeks\.org\/(user\/)?/i, '')
        .replace(/^https?:\/\/(www\.)?github\.com\//i, '');
   return h.replace(/^@+/, '').replace(/\/+$/, '');
 };
 
 // @route   POST /api/profile/platforms
-// @desc    Link a platform handle and generate verification code
+// @desc    Link a platform handle with adaptive method (submission, bio, oauth, self_report)
 // @access  Private
 router.post('/platforms', protect, async (req, res) => {
   try {
-    const { platform, handle } = req.body;
+    const { platform, handle, isUnverified, verificationMethod = 'bio' } = req.body;
 
     if (!platform || !handle) {
       return res.status(400).json({ message: 'Platform and handle are required' });
@@ -136,33 +180,53 @@ router.post('/platforms', protect, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if platform is already linked
+    // Determine initial status based on method / unverified flag
+    let targetStatus = 'pending';
+    let targetMethod = verificationMethod;
+
+    if (isUnverified || verificationMethod === 'self_report') {
+      targetStatus = 'unverified';
+      targetMethod = 'self_report';
+    } else if (verificationMethod === 'oauth') {
+      targetStatus = 'verified';
+    }
+
     const existingIndex = user.platforms.findIndex(p => p.platform === normalizedPlatform);
     const verificationCode = generateVerificationCode();
 
+    let stats = {};
+    // If self-report or OAuth, immediately fetch stats
+    if (targetStatus === 'unverified' || targetStatus === 'verified') {
+      try {
+        stats = await fetchPlatformStats(normalizedPlatform, normalizedHandle);
+      } catch (e) {
+        console.warn(`[Link] Initial stats fetch warning for ${normalizedPlatform}:`, e.message);
+      }
+    }
+
     if (existingIndex > -1) {
-      // If updating handle or regenerating code
       user.platforms[existingIndex].handle = normalizedHandle;
       user.platforms[existingIndex].verificationCode = verificationCode;
-      user.platforms[existingIndex].status = 'pending';
-      user.platforms[existingIndex].verifiedAt = null;
-      user.platforms[existingIndex].stats = {};
+      user.platforms[existingIndex].status = targetStatus;
+      user.platforms[existingIndex].verificationMethod = targetMethod;
+      user.platforms[existingIndex].verifiedAt = targetStatus === 'verified' ? new Date() : null;
+      user.platforms[existingIndex].stats = stats;
     } else {
-      // Add new platform
       user.platforms.push({
         platform: normalizedPlatform,
         handle: normalizedHandle,
-        status: 'pending',
+        status: targetStatus,
+        verificationMethod: targetMethod,
         verificationCode,
-        verifiedAt: null,
-        stats: {}
+        verifiedAt: targetStatus === 'verified' ? new Date() : null,
+        stats
       });
     }
 
     await user.save();
 
     res.status(200).json({
-      message: `Platform ${normalizedPlatform} linked successfully`,
+      message: `Platform ${normalizedPlatform} (${targetStatus}) linked successfully`,
       platforms: user.platforms
     });
   } catch (error) {
@@ -236,10 +300,12 @@ router.post('/verify/:platform', protect, async (req, res) => {
     }
 
     const { handle, verificationCode } = platformRecord;
-    const result = await verifyPlatform(platformToVerify, handle, verificationCode);
+    const requestedMethod = req.body?.method || platformRecord.verificationMethod || 'auto';
+    const result = await verifyPlatform(platformToVerify, handle, verificationCode, requestedMethod);
 
     if (result.verified) {
       platformRecord.status = 'verified';
+      platformRecord.verificationMethod = result.method || requestedMethod;
       platformRecord.verifiedAt = new Date();
 
       // Automatically fetch initial stats upon successful verification
@@ -254,13 +320,15 @@ router.post('/verify/:platform', protect, async (req, res) => {
 
       return res.status(200).json({
         success: true,
+        method: result.method,
         message: `Successfully verified ownership of ${platformToVerify} (@${handle})!`,
         platforms: user.platforms
       });
     } else {
       return res.status(400).json({
         success: false,
-        message: result.message || `Verification code "${verificationCode}" not found in @${handle}'s bio.`
+        method: result.method,
+        message: result.message || `Verification code "${verificationCode}" not found for @${handle}.`
       });
     }
   } catch (error) {

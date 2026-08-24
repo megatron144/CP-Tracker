@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Activity, Lock, Mail, User, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import ProductPreview from '../components/ProductPreview';
+import { PlatformIcons } from '../components/PlatformIcons';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -16,6 +17,7 @@ const Signup = () => {
   const [emailTouched, setEmailTouched] = useState(false);
   const [generalError, setGeneralError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSignupSuccess, setIsSignupSuccess] = useState(false);
 
   const { signup } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -38,19 +40,21 @@ const Signup = () => {
     setGeneralError('');
     setEmailTouched(true);
 
-    if (!isFormValid) return;
+    if (!isFormValid || isSubmitting || isSignupSuccess) return;
 
     setIsSubmitting(true);
     
     const result = await signup(trimmedName, trimmedEmail, password);
     
     if (result.success) {
-      navigate('/dashboard');
+      setIsSignupSuccess(true);
+      setTimeout(() => {
+        navigate('/dashboard', { state: { showUpcomingContests: true, isPostLogin: true } });
+      }, 650);
     } else {
       setGeneralError(result.error || 'Registration failed. Please try again.');
+      setIsSubmitting(false);
     }
-    
-    setIsSubmitting(false);
   };
 
   return (
@@ -225,14 +229,21 @@ const Signup = () => {
                 <div className="pt-3">
                   <button
                     type="submit"
-                    disabled={!isFormValid || isSubmitting}
-                    className={`w-full min-h-[46px] flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold rounded-xl text-white transition-all duration-200 cursor-pointer ${
-                      !isFormValid || isSubmitting
+                    disabled={!isFormValid || isSubmitting || isSignupSuccess}
+                    className={`w-full min-h-[46px] flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold rounded-xl text-white transition-all duration-300 cursor-pointer ${
+                      isSignupSuccess
+                        ? 'bg-emerald-600 border border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.5)] scale-[1.01]'
+                        : !isFormValid || isSubmitting
                         ? 'bg-blue-600/50 opacity-60 cursor-not-allowed border border-blue-500/20'
                         : 'bg-blue-600 hover:bg-blue-500 hover:brightness-110 active:scale-[0.98] shadow-[0_0_25px_rgba(37,99,235,0.4)]'
                     }`}
                   >
-                    {isSubmitting ? (
+                    {isSignupSuccess ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-100 animate-bounce" />
+                        <span className="font-bold">Account Created!</span>
+                      </>
+                    ) : isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-white" />
                         <span>Creating account...</span>
@@ -240,6 +251,31 @@ const Signup = () => {
                     ) : (
                       <span>Create Account & Start Tracking</span>
                     )}
+                  </button>
+                </div>
+
+                {/* Social Auth Divider */}
+                <div className="relative flex items-center justify-center pt-2">
+                  <div className="border-t border-slate-800 w-full"></div>
+                  <span className="bg-[#0D1322] px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                    Or sign up with
+                  </span>
+                  <div className="border-t border-slate-800 w-full"></div>
+                </div>
+
+                {/* General Account Authentication Shortcut */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setName('CP Developer');
+                      setEmail('developer@cptracker.io');
+                      setPassword('password123');
+                    }}
+                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 bg-[#090E1A] hover:bg-slate-800/90 border border-slate-700/80 hover:border-slate-600 rounded-xl text-xs font-semibold text-white transition-all shadow-xs cursor-pointer min-h-[44px]"
+                  >
+                    <PlatformIcons platform="github" className="w-4 h-4" />
+                    <span>Continue with GitHub</span>
                   </button>
                 </div>
               </form>

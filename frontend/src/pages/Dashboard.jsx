@@ -1,12 +1,16 @@
 import { useState, useEffect, useContext } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { 
-  Plus, ShieldCheck, Layers, Award, Activity, RotateCw, 
-  Trophy, Target, Flame, BarChart2, PieChart, CheckCircle2, Grid, Share2
+  Plus, ShieldCheck, Layers, RotateCw, 
+  Trophy, Target, Flame, BarChart2, Grid, Share2, Calendar, Edit3
 } from 'lucide-react';
 import PlatformCard from '../components/PlatformCard';
 import UnlinkedPlatformCard from '../components/UnlinkedPlatformCard';
 import LinkPlatformModal from '../components/LinkPlatformModal';
+import EditProfileModal from '../components/EditProfileModal';
+import UpcomingContests from '../components/UpcomingContests';
+import LinkAccountsHub from '../components/LinkAccountsHub';
 import ClistRatingGraph from '../components/charts/ClistRatingGraph';
 import PlatformPieChartsGrid from '../components/charts/PlatformPieChartsGrid';
 import ActivityHeatmap from '../components/charts/ActivityHeatmap';
@@ -17,15 +21,21 @@ import { API_BASE_URL, getStoredToken } from '../config/api';
 const ALL_PLATFORMS = Object.keys(PLATFORM_META);
 
 const Dashboard = () => {
-  const { user } = useContext(AuthContext);
+  const { user, updateDisplayName } = useContext(AuthContext);
+  const location = useLocation();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncingAll, setSyncingAll] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'analytics', 'platforms'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (location.state?.showLinkAccounts) return 'link_accounts';
+    if (location.state?.showUpcomingContests) return 'contests';
+    return 'overview';
+  }); // 'overview', 'contests', 'link_accounts', 'analytics', 'platforms'
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [selectedDefaultPlatform, setSelectedDefaultPlatform] = useState('leetcode');
   const [notification, setNotification] = useState('');
 
@@ -158,9 +168,16 @@ const Dashboard = () => {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <div className="flex items-center gap-3 mb-1.5">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Welcome, {profile?.name || user?.name}!
+            <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
+                <span>Welcome, {profile?.name || user?.name || 'Developer'}!</span>
+                <button
+                  onClick={() => setIsEditProfileOpen(true)}
+                  className="p-1.5 rounded-xl bg-blue-950/60 hover:bg-blue-900/80 text-blue-300 hover:text-white border border-blue-800/60 hover:border-blue-500 transition-all cursor-pointer shadow-xs"
+                  title="Edit Display Name"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 shadow-xs">
                 Unified Portfolio
@@ -172,6 +189,20 @@ const Dashboard = () => {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
+            {/* Upcoming Contests Radar Shortcut */}
+            <button
+              onClick={() => setActiveTab('contests')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-xs cursor-pointer border ${
+                activeTab === 'contests'
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+                  : 'bg-[#0B1120] hover:bg-slate-800/80 text-blue-300 hover:text-white border border-blue-900/60 hover:border-blue-500/50'
+              }`}
+              title="Open Live Upcoming Contests Radar"
+            >
+              <Calendar className="w-4 h-4 text-blue-400" />
+              <span>Contest Radar</span>
+            </button>
+
             {/* Share Public Portfolio Button */}
             <button
               onClick={() => {
@@ -256,7 +287,7 @@ const Dashboard = () => {
       </div>
 
       {/* Navigation View Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-blue-950/80 pb-3">
+      <div className="flex items-center gap-2 border-b border-blue-950/80 pb-3 flex-wrap">
         <button
           onClick={() => setActiveTab('overview')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs transition-all cursor-pointer ${
@@ -267,6 +298,21 @@ const Dashboard = () => {
         >
           <Grid className="w-3.5 h-3.5" />
           <span>Unified Overview</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('contests')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs transition-all cursor-pointer ${
+            activeTab === 'contests'
+              ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+              : 'bg-[#0B1120] text-blue-300 hover:text-white hover:bg-slate-900 border border-blue-950/60'
+          }`}
+        >
+          <Calendar className="w-3.5 h-3.5 text-blue-400" />
+          <span>Upcoming Contests</span>
+          <span className="px-1.5 py-0.2 text-[9px] font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Live
+          </span>
         </button>
 
         <button
@@ -292,6 +338,18 @@ const Dashboard = () => {
           <Layers className="w-3.5 h-3.5" />
           <span>Connected Platforms ({linkedPlatforms.length})</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('link_accounts')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs transition-all cursor-pointer ${
+            activeTab === 'link_accounts'
+              ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+              : 'bg-[#0B1120] text-blue-300 hover:text-white hover:bg-slate-900 border border-blue-950/60'
+          }`}
+        >
+          <Plus className="w-3.5 h-3.5 text-blue-400" />
+          <span>Account Linking Hub</span>
+        </button>
       </div>
 
       {/* Loading Skeleton */}
@@ -309,6 +367,23 @@ const Dashboard = () => {
           <span>{error}</span>
           <button onClick={fetchProfile} className="text-xs font-semibold underline hover:text-white">Retry</button>
         </div>
+      )}
+
+      {/* VIEW: LINK ACCOUNTS HUB */}
+      {activeTab === 'link_accounts' && (
+        <LinkAccountsHub
+          userPlatforms={profile?.platforms || []}
+          onUpdatePlatforms={handleLinkSuccess}
+          onContinueToDashboard={() => setActiveTab('overview')}
+        />
+      )}
+
+      {/* VIEW: UPCOMING CONTESTS SCREEN */}
+      {activeTab === 'contests' && (
+        <UpcomingContests 
+          username={profile?.name || user?.name || 'Coder'} 
+          onContinueToDashboard={() => setActiveTab('overview')} 
+        />
       )}
 
       {/* VIEW: OVERVIEW OR ANALYTICS (Charts & Visualizations) */}
@@ -399,6 +474,18 @@ const Dashboard = () => {
         onClose={() => setIsModalOpen(false)}
         onLinkSuccess={handleLinkSuccess}
         defaultPlatform={selectedDefaultPlatform}
+      />
+
+      {/* Edit Profile / Display Name Modal */}
+      <EditProfileModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        currentName={profile?.name || user?.name || ''}
+        onUpdateSuccess={(newName) => {
+          setProfile(prev => ({ ...prev, name: newName }));
+          if (updateDisplayName) updateDisplayName(newName);
+          showNotification(`Display name updated to '${newName}'.`);
+        }}
       />
     </div>
   );

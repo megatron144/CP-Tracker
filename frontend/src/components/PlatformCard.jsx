@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { 
   Copy, Check, Trash2, Clock, CheckCircle2, ShieldAlert, 
-  ExternalLink, ShieldCheck, Loader2, RotateCw, Award, 
-  Trophy, Target, Flame, Calendar, Edit3
+  ExternalLink, Loader2, RotateCw, 
+  Trophy, Target, Flame, Calendar, Code2, FileCode, Info
 } from 'lucide-react';
 import { PlatformIcons, PLATFORM_META } from './PlatformIcons';
 import { API_BASE_URL, getStoredToken } from '../config/api';
@@ -14,8 +14,9 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
   const [syncing, setSyncing] = useState(false);
   const [verifyError, setVerifyError] = useState('');
   const [syncError, setSyncError] = useState('');
+  const [activeMethod, setActiveMethod] = useState(platformData?.verificationMethod || 'auto');
 
-  const { platform, handle, status, verificationCode, createdAt, stats } = platformData;
+  const { platform, handle, status, verificationCode, stats } = platformData;
   const meta = PLATFORM_META[platform] || {
     name: platform,
     category: 'Developer Platform',
@@ -23,6 +24,9 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
   };
 
   const isVerified = status === 'verified';
+  const isUnverified = status === 'unverified';
+  const isPending = status === 'pending';
+
   const cleanDisplayHandle = (handle || '')
     .replace(/^https?:\/\/(www\.)?leetcode\.com\/(u\/)?/i, '')
     .replace(/^https?:\/\/(www\.)?codeforces\.com\/profile\//i, '')
@@ -35,15 +39,14 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
   const profileLink = meta?.profileUrl ? meta.profileUrl(cleanDisplayHandle) : '#';
   const editLink = meta?.editUrl ? meta.editUrl(cleanDisplayHandle) : '#';
 
-  const handleCopy = async () => {
-    if (!verificationCode) return;
+  const handleCopy = async (textToCopy) => {
+    const text = textToCopy || verificationCode;
+    if (!text) return;
     try {
-      await navigator.clipboard.writeText(verificationCode);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
-    } catch {
-      // Fallback
-    }
+    } catch {}
   };
 
   const handleDelete = async () => {
@@ -54,9 +57,11 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
     }
   };
 
-  const handleVerify = async () => {
+  const handleVerify = async (methodOverride) => {
     setVerifying(true);
     setVerifyError('');
+    const method = methodOverride || (activeMethod === 'auto' ? meta.primaryMethod : activeMethod);
+
     try {
       const token = getStoredToken();
       const res = await fetch(`${API_BASE_URL}/api/profile/verify/${platform}`, {
@@ -64,12 +69,13 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ method })
       });
 
       const data = await res.json();
       if (!res.ok || (!data.verified && !data.success)) {
-        throw new Error(data.message || 'Verification failed. Make sure the code is saved in your profile bio.');
+        throw new Error(data.message || 'Verification token not found yet.');
       }
 
       if (onVerifySuccess) {
@@ -121,8 +127,11 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
     return new Date(date).toLocaleDateString();
   };
 
+  const currentMethod = activeMethod === 'auto' ? (meta.primaryMethod || 'bio') : activeMethod;
+
   return (
-    <div className="bg-[#0D1322] rounded-2xl border border-blue-950/80 hover:border-blue-700/50 shadow-lg hover:shadow-[0_0_25px_rgba(37,99,235,0.15)] transition-all duration-200 overflow-hidden flex flex-col justify-between">
+    <div className="bg-[#0D1322] rounded-2xl border border-blue-950/80 hover:border-blue-700/50 shadow-lg hover:shadow-[0_0_25px_rgba(37,99,235,0.15)] transition-all duration-200 overflow-hidden flex flex-col justify-between select-none">
+      
       {/* Card Header */}
       <div className="p-5 border-b border-blue-950/60 bg-[#0B1120]/60">
         <div className="flex items-start justify-between gap-3">
@@ -149,12 +158,17 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
 
           {/* Status Badge */}
           {isVerified ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/60 text-emerald-300 border border-emerald-800/60 shadow-xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/60 text-emerald-300 border border-emerald-800/60 shadow-xs font-mono">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Verified
             </span>
+          ) : isUnverified ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950/60 text-amber-300 border border-amber-800/60 font-mono" title="Self-reported for personal tracking">
+              <ShieldAlert className="w-3.5 h-3.5" />
+              Unverified
+            </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950/60 text-amber-300 border border-amber-800/60">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-950/60 text-blue-300 border border-blue-800/60 font-mono">
               <Clock className="w-3.5 h-3.5 animate-pulse" />
               Pending
             </span>
@@ -162,280 +176,123 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
         </div>
       </div>
 
-      {/* Card Body: Verification Code OR Normalized Stats Grid */}
+      {/* Card Body: Verification Steps OR Stats Grid */}
       <div className="p-5 bg-[#090E1A]/80 flex-1 space-y-3.5">
-        {!isVerified ? (
+        
+        {/* PENDING VERIFICATION STATE */}
+        {isPending && (
           <div className="bg-[#0F172A] p-4 rounded-xl border border-blue-900/40 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                Verification Code
-              </span>
-              <span className="text-[10px] text-blue-400 font-medium">Step 1 of 2</span>
-            </div>
-
-            {/* Code Box + Copy */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-[#090D16] border border-blue-900/60 rounded-lg px-3 py-2 text-center font-mono text-base font-bold tracking-widest text-blue-300 select-all shadow-inner">
-                {verificationCode}
+            
+            {/* Method switch tabs - only for platforms supporting both submission and bio (Codeforces & AtCoder) */}
+            {['codeforces', 'atcoder'].includes(platform) && (
+              <div className="flex items-center justify-between text-xs pb-1 border-b border-slate-800">
+                <span className="font-semibold text-slate-400">Method:</span>
+                <div className="flex items-center gap-1 bg-[#090E1A] p-0.5 rounded-lg border border-slate-800 text-[10px]">
+                  <button
+                    onClick={() => setActiveMethod('submission')}
+                    className={`px-2 py-0.5 rounded-md font-semibold cursor-pointer ${
+                      currentMethod === 'submission' ? 'bg-blue-600 text-white' : 'text-slate-400'
+                    }`}
+                  >
+                    Submission
+                  </button>
+                  <button
+                    onClick={() => setActiveMethod('bio')}
+                    className={`px-2 py-0.5 rounded-md font-semibold cursor-pointer ${
+                      currentMethod === 'bio' ? 'bg-blue-600 text-white' : 'text-slate-400'
+                    }`}
+                  >
+                    Profile Code
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] shrink-0 cursor-pointer"
-                title="Copy verification code"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-white" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy</span>
-                  </>
+            )}
+
+            {/* Submission guide */}
+            {currentMethod === 'submission' && meta.problemTarget ? (
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between text-blue-300 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <Code2 className="w-3.5 h-3.5 text-blue-400" />
+                    Submit comment on {meta.problemTarget.name}:
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-[#090D16] border border-blue-900/60 rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-blue-300 truncate">
+                    // {verificationCode}
+                  </div>
+                  <button
+                    onClick={() => handleCopy(`// ${verificationCode}\n#include <iostream>\nint main() { return 0; }`)}
+                    className="px-2.5 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg text-xs font-semibold transition-all border border-blue-500/40 cursor-pointer"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                {/* Direct link to specific problem */}
+                <a
+                  href={meta.problemTarget.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 w-full py-2 bg-blue-600/30 hover:bg-blue-600 border border-blue-500/50 hover:border-blue-400 rounded-xl text-xs font-semibold text-blue-200 hover:text-white transition-all shadow-xs group cursor-pointer"
+                >
+                  <span>Submit to {meta.problemTarget.name}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+
+                {platform === 'codechef' && meta.disclaimer && (
+                  <p className="text-[10px] text-yellow-400/90 flex items-center gap-1 pt-1">
+                    <Info className="w-3 h-3 shrink-0" />
+                    {meta.disclaimer}
+                  </p>
                 )}
-              </button>
-            </div>
+              </div>
+            ) : (
+              /* Bio code guide */
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between text-amber-300 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <FileCode className="w-3.5 h-3.5 text-amber-400" />
+                    Paste code into {meta.bioField}:
+                  </span>
+                </div>
 
-            {/* Direct Open Profile/Settings Button */}
-            <a
-              href={editLink}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-blue-950/70 hover:bg-blue-900/60 border border-blue-800/60 hover:border-blue-500/60 rounded-lg text-xs font-semibold text-blue-200 hover:text-white transition-all shadow-xs group"
-            >
-              <span>Open @{cleanDisplayHandle} on {meta.name}</span>
-              <ExternalLink className="w-3.5 h-3.5 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
-            </a>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-[#090D16] border border-amber-900/60 rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold text-amber-300 truncate">
+                    {verificationCode}
+                  </div>
+                  <button
+                    onClick={() => handleCopy(verificationCode)}
+                    className="px-2.5 py-1.5 bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white rounded-lg text-xs font-semibold transition-all border border-amber-500/40 cursor-pointer"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
 
-            {/* Guidance Text */}
-            <div className="text-[11px] text-slate-400 leading-relaxed bg-[#0B1120] p-2 rounded-lg border border-slate-800/80 space-y-0.5">
-              <p>
-                👉 Paste code in: <strong className="text-slate-200">{meta.name} {meta.bioField}</strong>
-              </p>
-              {meta.editGuide && (
-                <p className="text-slate-400">
-                  📍 <span className="text-blue-300 font-medium">{meta.editGuide}</span>
-                </p>
-              )}
-            </div>
+                <a
+                  href={editLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 bg-amber-950/70 hover:bg-amber-900/60 border border-amber-800/60 rounded-lg text-xs text-amber-200"
+                >
+                  <span>Open {meta.name} Settings</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
 
-            {/* Verification Error Notice */}
             {verifyError && (
-              <div className="p-2.5 bg-red-950/70 border border-red-800/80 rounded-lg text-xs text-red-300 leading-relaxed animate-in fade-in duration-200">
+              <p className="text-xs text-red-400 bg-red-950/40 p-2 rounded-lg border border-red-900/60">
                 {verifyError}
-              </div>
-            )}
-          </div>
-        ) : platform === 'github' ? (
-          /* GITHUB VERIFIED: Repos, Stars, Max Commits/Month, Followers */
-          <div className="space-y-3.5">
-            <div className="grid grid-cols-2 gap-2.5">
-              {/* Stat 1: Public Repositories */}
-              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">Public Repos</span>
-                  <Target className="w-3.5 h-3.5 text-emerald-400" />
-                </div>
-                <span className="text-lg font-extrabold text-white tracking-tight">
-                  {stats?.extra?.publicRepos !== undefined ? stats.extra.publicRepos : stats?.totalSolved || 0}
-                </span>
-              </div>
-
-              {/* Stat 2: Total Stars */}
-              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">Total Stars</span>
-                  <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                </div>
-                <span className="text-lg font-extrabold text-amber-300 tracking-tight">
-                  ★ {stats?.extra?.totalStars !== undefined ? stats.extra.totalStars : stats?.rating || 0}
-                </span>
-              </div>
-
-              {/* Stat 3: Max Commits in a Month */}
-              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">Peak Commits/Mo</span>
-                  <Flame className="w-3.5 h-3.5 text-red-400" />
-                </div>
-                <span className="text-lg font-extrabold text-white tracking-tight">
-                  {stats?.extra?.maxMonthlyCommits ? `${stats.extra.maxMonthlyCommits}` : '—'}
-                </span>
-              </div>
-
-              {/* Stat 4: Followers & Forks */}
-              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">Followers</span>
-                  <Award className="w-3.5 h-3.5 text-blue-400" />
-                </div>
-                <span className="text-lg font-extrabold text-white tracking-tight">
-                  {stats?.extra?.followers !== undefined ? stats.extra.followers : stats?.maxRating || 0}
-                </span>
-              </div>
-            </div>
-
-            {/* Breakdown Pill */}
-            <div className="flex items-center justify-between gap-1.5 p-2 bg-[#0B1120] rounded-xl border border-slate-800/80 text-[11px]">
-              <span className="text-amber-300 font-semibold">★ {stats?.extra?.totalStars || 0} Stars</span>
-              <span className="text-blue-300 font-semibold">🍴 {stats?.extra?.totalForks || 0} Forks</span>
-              <span className="text-purple-300 font-semibold">💻 {stats?.extra?.topLanguage || 'Code'}</span>
-            </div>
-
-            {syncError && (
-              <div className="p-2.5 bg-red-950/70 border border-red-800/80 rounded-lg text-xs text-red-300 leading-relaxed animate-in fade-in duration-200">
-                {syncError}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* STANDARD VERIFIED STATE: Competitive Programming Stats */
-          <div className="space-y-3.5">
-            {/* Stats Metric Cards Grid */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {/* Stat 1: Rating / Score */}
-              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">Rating / Score</span>
-                  <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-lg font-extrabold text-white tracking-tight">
-                    {stats?.rating !== null && stats?.rating !== undefined ? stats.rating.toLocaleString() : '—'}
-                  </span>
-                  {stats?.maxRating && stats.maxRating !== stats.rating && (
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      (max {stats.maxRating})
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Stat 2: Total Solved */}
-              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">Solved</span>
-                  <Target className="w-3.5 h-3.5 text-emerald-400" />
-                </div>
-                <span className="text-lg font-extrabold text-white tracking-tight">
-                  {stats?.totalSolved !== null && stats?.totalSolved !== undefined ? stats.totalSolved.toLocaleString() : '0'}
-                </span>
-              </div>
-
-              {/* Stat 3: Rank / Tier / Badge */}
-              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">Rank / Tier</span>
-                  <Award className="w-3.5 h-3.5 text-blue-400" />
-                </div>
-                <span className="text-xs font-bold text-blue-300 truncate block">
-                  {stats?.rank || (stats?.rating ? `${stats.rating} Rated` : 'Active')}
-                </span>
-              </div>
-
-              {/* Stat 4: Contests Participated */}
-              <div className="p-3 bg-[#0F172A] rounded-xl border border-blue-950/70 relative overflow-hidden">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">Contests</span>
-                  <Calendar className="w-3.5 h-3.5 text-purple-400" />
-                </div>
-                <span className="text-lg font-extrabold text-white tracking-tight">
-                  {stats?.contestsGiven || 0}
-                </span>
-              </div>
-            </div>
-
-            {/* Top 3 Best Contest Finishes Widget for All Coding Platforms */}
-            {['leetcode', 'codeforces', 'codechef', 'atcoder'].includes(platform) && (
-              <div className="p-2.5 bg-[#0B1120] rounded-xl border border-blue-900/50 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
-                  <span className="flex items-center gap-1 text-amber-400">
-                    <Trophy className="w-3.5 h-3.5" />
-                    Best Contest Finishes
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-1.5 text-xs">
-                  {stats?.extra?.topRanks && stats.extra.topRanks.length > 0 ? (
-                    stats.extra.topRanks.slice(0, 3).map((rk, idx) => (
-                      <span
-                        key={idx}
-                        className={`px-2 py-1 rounded-lg font-bold text-[11px] truncate flex-1 text-center border ${
-                          idx === 0
-                            ? 'bg-amber-950/50 text-amber-300 border-amber-800/60 shadow-[0_0_10px_rgba(245,158,11,0.15)]'
-                            : idx === 1
-                            ? 'bg-slate-800/60 text-slate-200 border-slate-700'
-                            : 'bg-orange-950/40 text-orange-300 border-orange-900/50'
-                        }`}
-                      >
-                        {idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : '🥉 '}
-                        {rk}
-                      </span>
-                    ))
-                  ) : (
-                    <div className="flex items-center justify-between w-full gap-1.5">
-                      <span className="px-2 py-1 rounded-lg font-semibold text-[11px] bg-amber-950/40 text-amber-300 border border-amber-900/50 flex-1 text-center">
-                        🥇 {stats?.rank || (stats?.rating ? `#${stats.rating}` : 'Top Rank')}
-                      </span>
-                      {stats?.maxRating && (
-                        <span className="px-2 py-1 rounded-lg font-semibold text-[11px] bg-slate-800/60 text-slate-200 border border-slate-700 flex-1 text-center">
-                          🥈 Max {stats.maxRating}
-                        </span>
-                      )}
-                      <span className="px-2 py-1 rounded-lg font-semibold text-[11px] bg-orange-950/30 text-orange-300 border border-orange-900/40 flex-1 text-center">
-                        🥉 Active
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              </p>
             )}
 
-            {/* Sync Error Notice */}
-            {syncError && (
-              <div className="p-2.5 bg-red-950/70 border border-red-800/80 rounded-lg text-xs text-red-300 leading-relaxed animate-in fade-in duration-200">
-                {syncError}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Card Footer Actions */}
-      <div className="px-5 py-3 bg-[#0B1120] border-t border-blue-950/60 flex items-center justify-between text-xs">
-        <span className="text-slate-500 flex items-center gap-1">
-          {isVerified ? (
-            <>
-              <Clock className="w-3 h-3 text-slate-500" />
-              <span>{formatTimeAgo(stats?.lastSynced)}</span>
-            </>
-          ) : (
-            <span>Linked {new Date(createdAt || Date.now()).toLocaleDateString()}</span>
-          )}
-        </span>
-
-        <div className="flex items-center gap-2">
-          {/* Verified Actions: Sync Now Button */}
-          {isVerified && (
+            {/* Verify CTA */}
             <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-800/60 hover:border-blue-500 text-blue-300 hover:text-white rounded-lg font-semibold text-xs transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-              title="Fetch fresh live statistics from platform"
-            >
-              <RotateCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-blue-400' : ''}`} />
-              <span>{syncing ? 'Syncing...' : 'Sync Now'}</span>
-            </button>
-          )}
-
-          {/* Pending Actions: Verify Bio Button */}
-          {!isVerified && (
-            <button
-              onClick={handleVerify}
+              onClick={() => handleVerify()}
               disabled={verifying}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold text-xs transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] disabled:opacity-50 cursor-pointer"
-              title="Verify that code is in your bio"
+              className="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               {verifying ? (
                 <>
@@ -444,24 +301,130 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
                 </>
               ) : (
                 <>
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Verify Bio</span>
+                  <RotateCw className="w-3.5 h-3.5" />
+                  <span>Check Verification Now</span>
                 </>
               )}
             </button>
+          </div>
+        )}
+
+        {/* UNVERIFIED STATE NOTICE (Stats available for personal tracking) */}
+        {isUnverified && (
+          <div className="p-3 bg-amber-950/30 border border-amber-800/40 rounded-xl text-xs text-amber-300 space-y-2">
+            <div className="flex items-center justify-between font-semibold">
+              <span>Personal Tracking Mode</span>
+              <button
+                onClick={() => handleVerify()}
+                disabled={verifying}
+                className="text-[11px] text-amber-200 underline hover:text-white cursor-pointer"
+              >
+                {verifying ? 'Verifying...' : 'Verify Now →'}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              Stats are displayed for your private dashboard. Verify ownership to unlock trusted leaderboard rank badges.
+            </p>
+          </div>
+        )}
+
+        {/* STATS DISPLAY (For both verified and unverified) */}
+        {(isVerified || isUnverified) && (
+          <div className="space-y-3">
+            {stats && (stats.totalSolved > 0 || stats.rating > 0 || stats.contestsGiven > 0) ? (
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                    <Target className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Problems Solved</span>
+                  </div>
+                  <p className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5">
+                    {stats.totalSolved?.toLocaleString() || 0}
+                  </p>
+                </div>
+
+                <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                    <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Current Rating</span>
+                  </div>
+                  <p className="text-lg font-extrabold text-amber-300 font-mono mt-0.5">
+                    {stats.rating ? stats.rating.toLocaleString() : '—'}
+                  </p>
+                </div>
+
+                <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                    <Flame className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Contests</span>
+                  </div>
+                  <p className="text-lg font-extrabold text-purple-300 font-mono mt-0.5">
+                    {stats.contestsGiven || 0}
+                  </p>
+                </div>
+
+                <div className="bg-[#0B1120] p-3 rounded-xl border border-slate-800/80">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Max Rating</span>
+                  </div>
+                  <p className="text-lg font-extrabold text-blue-300 font-mono mt-0.5">
+                    {stats.maxRating ? stats.maxRating.toLocaleString() : '—'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 bg-[#0B1120] rounded-xl border border-slate-800/80 text-xs text-slate-400 space-y-2">
+                <p>No statistics cached yet.</p>
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  className="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <RotateCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                  <span>Sync Statistics Now</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {syncError && (
+          <p className="text-xs text-red-400 bg-red-950/40 p-2 rounded-lg border border-red-900/60">
+            {syncError}
+          </p>
+        )}
+      </div>
+
+      {/* Card Footer */}
+      <div className="p-4 bg-[#090D16] border-t border-slate-800/80 flex items-center justify-between text-xs">
+        <span className="text-slate-500 font-mono text-[11px]">
+          {formatTimeAgo(stats?.lastSynced)}
+        </span>
+
+        <div className="flex items-center gap-2">
+          {(isVerified || isUnverified) && (
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title="Synchronize stats"
+            >
+              <RotateCw className={`w-4 h-4 ${syncing ? 'animate-spin text-blue-400' : ''}`} />
+            </button>
           )}
 
-          {/* Delete / Unlink Button */}
           <button
             onClick={handleDelete}
             disabled={unlinking}
-            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
-            title={`Unlink ${meta.name}`}
+            className="p-2 text-red-400/80 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+            title="Unlink platform"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
+
     </div>
   );
 };

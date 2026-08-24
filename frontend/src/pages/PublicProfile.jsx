@@ -250,10 +250,10 @@ const PublicProfile = () => {
                     </span>
                   </div>
 
-                  {/* Solved / Repos */}
+                  {/* Solved */}
                   <div className="p-2.5 bg-[#090D16] rounded-xl border border-slate-800">
                     <span className="text-[10px] uppercase font-semibold text-slate-400 block">
-                      {platformData.platform === 'github' ? 'Public Repos' : 'Solved'}
+                      Solved
                     </span>
                     <span className="text-base font-extrabold text-emerald-400 font-mono">
                       {platformData.stats?.totalSolved || 0}

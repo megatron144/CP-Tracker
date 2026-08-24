@@ -14,7 +14,7 @@ const statsSchema = new mongoose.Schema({
 const platformSchema = new mongoose.Schema({
   platform: {
     type: String,
-    enum: ['leetcode', 'codeforces', 'codechef', 'github', 'atcoder'],
+    enum: ['leetcode', 'codeforces', 'codechef', 'atcoder', 'gfg', 'github'],
     required: true
   },
   handle: {
@@ -24,8 +24,13 @@ const platformSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'verified'],
+    enum: ['pending', 'verified', 'unverified'],
     default: 'pending'
+  },
+  verificationMethod: {
+    type: String,
+    enum: ['submission', 'bio', 'oauth', 'self_report'],
+    default: 'bio'
   },
   verificationCode: {
     type: String,

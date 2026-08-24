@@ -4,6 +4,7 @@ require('dotenv').config();
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const contestRoutes = require('./routes/contestRoutes');
 const { startBackgroundSync } = require('./services/cronService');
 
 const app = express();
@@ -19,6 +20,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/contests', contestRoutes);
 
 // Basic health check route
 app.get('/api/health', (req, res) => {
