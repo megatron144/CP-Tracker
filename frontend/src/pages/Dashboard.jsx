@@ -12,7 +12,7 @@ import PlatformPieChartsGrid from '../components/charts/PlatformPieChartsGrid';
 import ActivityHeatmap from '../components/charts/ActivityHeatmap';
 import PlatformBreakdownBar from '../components/charts/PlatformBreakdownBar';
 import { PLATFORM_META } from '../components/PlatformIcons';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getStoredToken } from '../config/api';
 
 const ALL_PLATFORMS = Object.keys(PLATFORM_META);
 
@@ -32,7 +32,7 @@ const Dashboard = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const token = JSON.parse(localStorage.getItem('user'))?.token;
+      const token = getStoredToken();
       const res = await fetch(`${API_BASE_URL}/api/profile`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -76,7 +76,7 @@ const Dashboard = () => {
 
     setSyncingAll(true);
     try {
-      const token = JSON.parse(localStorage.getItem('user'))?.token;
+      const token = getStoredToken();
       const res = await fetch(`${API_BASE_URL}/api/profile/sync-all`, {
         method: 'POST',
         headers: {
@@ -101,7 +101,7 @@ const Dashboard = () => {
 
   const handleUnlink = async (platformKey) => {
     try {
-      const token = JSON.parse(localStorage.getItem('user'))?.token;
+      const token = getStoredToken();
       const res = await fetch(`${API_BASE_URL}/api/profile/platforms/${platformKey}`, {
         method: 'DELETE',
         headers: {

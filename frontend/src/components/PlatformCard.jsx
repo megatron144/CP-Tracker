@@ -5,7 +5,7 @@ import {
   Trophy, Target, Flame, Calendar, Edit3
 } from 'lucide-react';
 import { PlatformIcons, PLATFORM_META } from './PlatformIcons';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getStoredToken } from '../config/api';
 
 const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }) => {
   const [copied, setCopied] = useState(false);
@@ -58,7 +58,7 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
     setVerifying(true);
     setVerifyError('');
     try {
-      const token = JSON.parse(localStorage.getItem('user'))?.token;
+      const token = getStoredToken();
       const res = await fetch(`${API_BASE_URL}/api/profile/verify/${platform}`, {
         method: 'POST',
         headers: {
@@ -86,7 +86,7 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
     setSyncing(true);
     setSyncError('');
     try {
-      const token = JSON.parse(localStorage.getItem('user'))?.token;
+      const token = getStoredToken();
       const res = await fetch(`${API_BASE_URL}/api/profile/sync/${platform}`, {
         method: 'POST',
         headers: {

@@ -6,3 +6,19 @@ export const API_BASE_URL =
   (typeof window !== 'undefined' && window.location.hostname
     ? `${window.location.protocol}//${window.location.hostname}:5001`
     : 'http://localhost:5001');
+
+export const getStoredUser = () => {
+  try {
+    const item = localStorage.getItem('user');
+    if (!item || item === 'undefined' || item === 'null') return null;
+    return JSON.parse(item);
+  } catch {
+    return null;
+  }
+};
+
+export const getStoredToken = () => {
+  const user = getStoredUser();
+  return user?.token || '';
+};
+

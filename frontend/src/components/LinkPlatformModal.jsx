@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, Sparkles } from 'lucide-react';
 import { PlatformIcons, PLATFORM_META } from './PlatformIcons';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getStoredToken } from '../config/api';
 
 const LinkPlatformModal = ({ isOpen, onClose, onLinkSuccess, defaultPlatform = 'leetcode' }) => {
   const [selectedPlatform, setSelectedPlatform] = useState(defaultPlatform);
@@ -32,7 +32,7 @@ const LinkPlatformModal = ({ isOpen, onClose, onLinkSuccess, defaultPlatform = '
     setError('');
 
     try {
-      const token = JSON.parse(localStorage.getItem('user'))?.token;
+      const token = getStoredToken();
       const res = await fetch(`${API_BASE_URL}/api/profile/platforms`, {
         method: 'POST',
         headers: {
