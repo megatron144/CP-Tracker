@@ -10,7 +10,8 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const jwtSecret = process.env.JWT_SECRET || process.env.JWT_KEY || process.env.JWTKEY || process.env.JWTSECRET || 'fallback-cp-tracker-jwt-secret';
+      const decoded = jwt.verify(token, jwtSecret);
 
       // Get user from token (exclude password)
       req.user = await User.findById(decoded.id).select('-password');

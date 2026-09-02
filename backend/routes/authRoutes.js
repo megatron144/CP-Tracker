@@ -5,9 +5,12 @@ const User = require('../models/User');
 
 const router = express.Router();
 
+// Helper to get JWT secret
+const getJwtSecret = () => process.env.JWT_SECRET || process.env.JWT_KEY || process.env.JWTKEY || process.env.JWTSECRET || 'fallback-cp-tracker-jwt-secret';
+
 // Helper to generate token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  return jwt.sign({ id }, getJwtSecret(), { expiresIn: '30d' });
 };
 
 // @route   POST /api/auth/signup
