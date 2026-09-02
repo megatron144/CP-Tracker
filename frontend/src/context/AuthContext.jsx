@@ -1,8 +1,10 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/api';
 
 export const AuthContext = createContext();
+
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -54,15 +56,11 @@ export const AuthProvider = ({ children }) => {
   const updateDisplayName = (newName) => {
     setUser(prev => {
       if (!prev) return prev;
-      const updated = {
-        ...prev,
-        name: newName,
-        ...(prev.user ? { user: { ...prev.user, name: newName } } : {})
-      };
+      const updated = { ...prev, name: newName };
       try {
         localStorage.setItem('user', JSON.stringify(updated));
       } catch (e) {
-        console.error('Error saving updated user:', e);
+        console.error('Failed to update local user name:', e);
       }
       return updated;
     });

@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Activity, Lock, Mail, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound } from 'lucide-react';
 import ProductPreview from '../components/ProductPreview';
-import { PlatformIcons } from '../components/PlatformIcons';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -283,30 +282,6 @@ const Login = () => {
                     ) : (
                       <span>Sign in to Dashboard</span>
                     )}
-                  </button>
-                </div>
-
-                {/* Social Auth Divider */}
-                <div className="relative flex items-center justify-center pt-2">
-                  <div className="border-t border-slate-800 w-full"></div>
-                  <span className="bg-[#0D1322] px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                    Or sign in with
-                  </span>
-                  <div className="border-t border-slate-800 w-full"></div>
-                </div>
-
-                {/* General Account Authentication Shortcut */}
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('developer@cptracker.io');
-                      setPassword('password123');
-                    }}
-                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 bg-[#090E1A] hover:bg-slate-800/90 border border-slate-700/80 hover:border-slate-600 rounded-xl text-xs font-semibold text-white transition-all shadow-xs cursor-pointer min-h-[44px]"
-                  >
-                    <PlatformIcons platform="github" className="w-4 h-4" />
-                    <span>Continue with GitHub</span>
                   </button>
                 </div>
               </form>
