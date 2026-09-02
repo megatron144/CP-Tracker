@@ -1,0 +1,17 @@
+{
+  "name": "CP-Tracker — Unified Competitive Programming Dashboard",
+  "short_name": "CP-Tracker",
+  "description": "Track your competitive programming journey across Codeforces, LeetCode, AtCoder, CodeChef, and GeeksforGeeks in one unified dashboard.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090D16",
+  "theme_color": "#090D16",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
