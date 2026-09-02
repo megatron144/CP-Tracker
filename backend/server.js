@@ -8,7 +8,7 @@ const contestRoutes = require('./routes/contestRoutes');
 const { startBackgroundSync } = require('./services/cronService');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Connect to Database
 connectDB();

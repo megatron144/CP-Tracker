@@ -28,10 +28,10 @@ This guide provides end-to-end instructions for deploying CP-Tracker to producti
    - **Build Command**: `npm install`
    - **Start Command**: `node server.js`
 4. Add **Environment Variables**:
-   - `PORT`: `5001` (or leave default Render port)
    - `MONGO_URI`: `<Your MongoDB Atlas URI>`
    - `JWT_SECRET`: `<A random 64-character secret string>`
    - `NODE_ENV`: `production`
+   *(Note: You do **not** need to add `PORT`. Render automatically assigns and manages `PORT` via `process.env.PORT`).*
 5. Click **Create Web Service**. Note your public backend URL (e.g. `https://cp-tracker-backend.onrender.com`).
 
 ---
