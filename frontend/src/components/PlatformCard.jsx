@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   Copy, Check, Trash2, Clock, CheckCircle2, ShieldAlert, 
   ExternalLink, Loader2, RotateCw, 
-  Trophy, Target, Flame, Calendar, Code2, FileCode, Info
+  Trophy, Target, Flame, Calendar, Code2, FileCode, Info, Pencil
 } from 'lucide-react';
 import { PlatformIcons, PLATFORM_META } from './PlatformIcons';
 import { API_BASE_URL, getStoredToken } from '../config/api';
@@ -308,6 +308,19 @@ const PlatformCard = ({ platformData, onUnlink, onVerifySuccess, onSyncSuccess }
                 </>
               )}
             </button>
+
+            {/* Wrong Handle Helper */}
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={unlinking}
+                className="text-[11px] text-slate-400 hover:text-red-400 inline-flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <Pencil className="w-3 h-3" />
+                <span>Entered wrong username? Click to change handle</span>
+              </button>
+            </div>
           </div>
         )}
 

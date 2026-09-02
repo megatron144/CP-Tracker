@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   CheckCircle2, AlertCircle, Copy, Check, ExternalLink, 
   RotateCw, ArrowRight, ShieldAlert, Sparkles, 
-  Code2, FileCode, CheckCheck, Loader2, Info, ChevronRight
+  Code2, FileCode, CheckCheck, Loader2, Info, ChevronRight,
+  Trash2, Pencil
 } from 'lucide-react';
 import { PlatformIcons, PLATFORM_META } from './PlatformIcons';
 import { API_BASE_URL, getStoredToken } from '../config/api';
@@ -148,6 +149,31 @@ export const LinkAccountsHub = ({
       } else {
         showToast(`Linked @${handleInput}. Follow the verification step below to confirm ownership.`);
       }
+    } catch (err) {
+      setErrorStatus(prev => ({ ...prev, [platformKey]: err.message }));
+    } finally {
+      setLoadingAction(prev => ({ ...prev, [platformKey]: false }));
+    }
+  };
+
+  // Unlink or change an incorrect handle
+  const handleUnlink = async (platformKey) => {
+    setLoadingAction(prev => ({ ...prev, [platformKey]: true }));
+    setErrorStatus(prev => ({ ...prev, [platformKey]: '' }));
+    try {
+      const token = getStoredToken();
+      const res = await fetch(`${API_BASE_URL}/api/profile/platforms/${platformKey}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to unlink platform');
+      setLocalPlatforms(data.platforms);
+      if (onUpdatePlatforms) onUpdatePlatforms(data.platforms);
+      setHandles(prev => ({ ...prev, [platformKey]: '' }));
+      showToast(`Removed @${getRecord(platformKey)?.handle || platformKey}. You can now enter the correct handle.`);
     } catch (err) {
       setErrorStatus(prev => ({ ...prev, [platformKey]: err.message }));
     } finally {
@@ -444,6 +470,15 @@ export const LinkAccountsHub = ({
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleUnlink(platformKey)}
+                      disabled={isLoading}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-950/40 text-red-400 hover:text-red-300 hover:bg-red-900/50 border border-red-800/60 transition-colors text-xs font-semibold cursor-pointer"
+                      title="Change or remove handle"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Change Handle</span>
+                    </button>
                     <a
                       href={meta.profileUrl(record.handle)}
                       target="_blank"
@@ -461,7 +496,18 @@ export const LinkAccountsHub = ({
                   
                   {/* Handle display */}
                   <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800/60">
-                    <span className="text-slate-400">Account: <strong className="text-white font-mono">@{record.handle}</strong></span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400">Account: <strong className="text-white font-mono">@{record.handle}</strong></span>
+                      <button
+                        onClick={() => handleUnlink(platformKey)}
+                        disabled={isLoading}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-400 hover:text-red-300 hover:underline cursor-pointer ml-1.5"
+                        title="Entered wrong username? Click to change"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span>Change Handle</span>
+                      </button>
+                    </div>
                     
                     {/* Method Switcher only for platforms supporting both submission and bio (Codeforces & AtCoder) */}
                     {['codeforces', 'atcoder'].includes(platformKey) && (
